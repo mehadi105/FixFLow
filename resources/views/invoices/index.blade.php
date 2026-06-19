@@ -12,29 +12,29 @@
     <x-page-header title="Invoices" description="View and manage repair invoices" />
 
     <x-dashboard-card>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+        <div class="ff-table-wrap">
+            <table class="ff-table min-w-full">
                 <thead>
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Invoice No</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Customer</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Repair Request</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Total Amount</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Payment Status</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
+                        <th>Invoice No</th>
+                        <th>Customer</th>
+                        <th>Repair Request</th>
+                        <th>Total Amount</th>
+                        <th>Payment Status</th>
+                        <th>Date</th>
+                        <th class="text-right">Action</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody>
                     @foreach ($invoices as $invoice)
-                        <tr class="hover:bg-gray-50">
-                            <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-indigo-600">{{ $invoice['no'] }}</td>
-                            <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{{ $invoice['customer'] }}</td>
-                            <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $invoice['repair'] }}</td>
-                            <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{{ $invoice['amount'] }}</td>
-                            <td class="whitespace-nowrap px-4 py-3"><x-status-badge :status="$invoice['status']" /></td>
-                            <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{{ $invoice['date'] }}</td>
-                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                        <tr>
+                            <td class="cell-id">{{ $invoice['no'] }}</td>
+                            <td class="cell-strong">{{ $invoice['customer'] }}</td>
+                            <td class="cell-muted">{{ $invoice['repair'] }}</td>
+                            <td class="cell-strong">{{ $invoice['amount'] }}</td>
+                            <td><x-status-badge :status="$invoice['status']" /></td>
+                            <td class="cell-muted">{{ $invoice['date'] }}</td>
+                            <td class="cell-action">
                                 <x-table-action-button :href="url('/invoices/1')">View</x-table-action-button>
                             </td>
                         </tr>

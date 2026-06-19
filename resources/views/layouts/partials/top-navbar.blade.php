@@ -29,7 +29,10 @@
           <a href="#" class="block px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50">Profile</a>
           <a href="#" class="block px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50">Settings</a>
           <hr class="my-1 border-slate-100">
-          <a href="#" class="block px-4 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50">Log out</a>
+          <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="block w-full px-4 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-50">Log out</button>
+          </form>
         </div>
       </details>
     </div>

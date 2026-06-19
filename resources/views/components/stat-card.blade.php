@@ -5,7 +5,7 @@
     'icon' => null,
 ])
 
-<div {{ $attributes->merge(['class' => 'ff-card group p-6']) }}>
+<div {{ $attributes->merge(['class' => 'ff-card-flat p-6']) }}>
     <div class="flex items-start justify-between">
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $title }}</p>
@@ -19,7 +19,7 @@
                 {!! $icon !!}
             </div>
         @else
-            <div class="h-11 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-blue-500 opacity-80"></div>
+            <div class="h-10 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-blue-500 opacity-80"></div>
         @endif
     </div>
 </div>

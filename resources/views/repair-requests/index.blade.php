@@ -18,57 +18,56 @@
         </x-slot>
     </x-page-header>
 
-  <x-dashboard-card>
-    {{-- Search and filter --}}
-    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div class="flex-1">
-            <label for="search" class="sr-only">Search</label>
-            <input type="search" id="search" placeholder="Search by request ID, device, or issue..." class="ff-input">
+    <x-dashboard-card>
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div class="ff-field flex-1">
+                <label for="search" class="sr-only">Search</label>
+                <input type="search" id="search" placeholder="Search by request ID, device, or issue..." class="ff-input">
+            </div>
+            <div class="ff-field sm:w-48">
+                <label for="status-filter" class="sr-only">Filter by status</label>
+                <select id="status-filter" class="ff-input">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="diagnosing">Diagnosing</option>
+                    <option value="repairing">Repairing</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
         </div>
-        <div class="sm:w-48">
-            <label for="status-filter" class="sr-only">Filter by status</label>
-            <select id="status-filter" class="ff-input">
-                <option value="">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="assigned">Assigned</option>
-                <option value="diagnosing">Diagnosing</option>
-                <option value="repairing">Repairing</option>
-                <option value="completed">Completed</option>
-            </select>
-        </div>
-    </div>
 
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead>
-                <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Request ID</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Device Type</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Brand/Model</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Issue</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Technician</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @foreach ($requests as $request)
-                    <tr class="hover:bg-gray-50">
-                        <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-indigo-600">{{ $request['id'] }}</td>
-                        <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $request['type'] }}</td>
-                        <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{{ $request['brand_model'] }}</td>
-                        <td class="max-w-xs truncate px-4 py-3 text-sm text-gray-600">{{ $request['issue'] }}</td>
-                        <td class="whitespace-nowrap px-4 py-3"><x-status-badge :status="$request['status']" /></td>
-                        <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $request['technician'] }}</td>
-                        <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{{ $request['date'] }}</td>
-                        <td class="whitespace-nowrap px-4 py-3 text-right">
-                            <x-table-action-button :href="url('/repair-requests/1')">View</x-table-action-button>
-                        </td>
+        <div class="ff-table-wrap">
+            <table class="ff-table min-w-full">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Device Type</th>
+                        <th>Brand/Model</th>
+                        <th>Issue</th>
+                        <th>Status</th>
+                        <th>Technician</th>
+                        <th>Date</th>
+                        <th class="text-right">Action</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-  </x-dashboard-card>
+                </thead>
+                <tbody>
+                    @foreach ($requests as $request)
+                        <tr>
+                            <td class="cell-id">{{ $request['id'] }}</td>
+                            <td class="cell-muted">{{ $request['type'] }}</td>
+                            <td class="cell-strong">{{ $request['brand_model'] }}</td>
+                            <td class="cell-truncate">{{ $request['issue'] }}</td>
+                            <td><x-status-badge :status="$request['status']" /></td>
+                            <td class="cell-muted">{{ $request['technician'] }}</td>
+                            <td class="cell-muted">{{ $request['date'] }}</td>
+                            <td class="cell-action">
+                                <x-table-action-button :href="url('/repair-requests/1')">View</x-table-action-button>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </x-dashboard-card>
 </x-app-layout>
