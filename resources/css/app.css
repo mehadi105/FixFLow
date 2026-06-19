@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+@layer components {
+  .ff-mesh {
+    background-color: #f8fafc;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.1) 0, transparent 45%),
+      radial-gradient(at 50% 100%, rgba(129, 140, 248, 0.08) 0, transparent 50%);
+  }
+
+  .ff-mesh-dark {
+    background-color: #0f172a;
+    background-image:
+      radial-gradient(at 20% 20%, rgba(99, 102, 241, 0.35) 0, transparent 45%),
+      radial-gradient(at 80% 0%, rgba(59, 130, 246, 0.25) 0, transparent 40%),
+      radial-gradient(at 50% 80%, rgba(129, 140, 248, 0.15) 0, transparent 50%);
+  }
+
+  .ff-dot-grid {
+    background-image: radial-gradient(circle, rgba(148, 163, 184, 0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .ff-glass {
+    @apply border border-white/60 bg-white/75 shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl;
+  }
+
+  .ff-glass-dark {
+    @apply border border-white/10 bg-slate-900/80 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-xl;
+  }
+
+  .ff-card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_40px_rgba(15,23,42,0.06)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_48px_rgba(15,23,42,0.08)];
+  }
+
+  .ff-card-flat {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.05)];
+  }
+
+  .ff-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(79,70,229,0.35)] transition-all duration-200 hover:from-indigo-500 hover:to-blue-500 hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] active:scale-[0.98];
+  }
+
+  .ff-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98];
+  }
+
+  .ff-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600;
+  }
+
+  .ff-input {
+    @apply block w-full rounded-xl border-0 bg-slate-50/80 py-2.5 text-slate-900 shadow-inner shadow-slate-200/50 ring-1 ring-slate-200/80 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/40 sm:text-sm;
+  }
+
+  .ff-label {
+    @apply block text-sm font-medium text-slate-700;
+  }
+
+  .ff-gradient-text {
+    @apply bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-500 bg-clip-text text-transparent;
+  }
+
+  .ff-table thead th {
+    @apply px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+
+  .ff-table tbody td {
+    @apply px-4 py-3.5 text-sm;
+  }
+
+  .ff-table tbody tr {
+    @apply border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/80;
+  }
+
+  .ff-nav-link {
+    @apply flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200;
+  }
+
+  .ff-nav-link-active {
+    @apply bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-white/10;
+  }
+
+  .ff-nav-link-inactive {
+    @apply text-slate-400 hover:bg-white/5 hover:text-slate-100;
+  }
+
+  .ff-hero-glow {
+    @apply pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-indigo-400/20 blur-3xl;
+  }
+}
