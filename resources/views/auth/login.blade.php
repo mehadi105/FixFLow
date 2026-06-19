@@ -5,15 +5,23 @@
         <a href="{{ route('register') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">Create an account</a>
     </p>
 
-    <form class="mt-8 space-y-5" action="{{ url('/dashboard/customer') }}" method="GET">
-        <div>
+    <form class="mt-8 space-y-5" action="{{ route('login') }}" method="POST">
+        @csrf
+
+        @if ($errors->any())
+            <div class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <div class="ff-field">
             <label for="email" class="ff-label">Email address</label>
-            <input type="email" id="email" name="email" value="john@example.com" required autocomplete="username" class="ff-input mt-1.5">
+            <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="username" class="ff-input">
         </div>
 
-        <div>
+        <div class="ff-field">
             <label for="password" class="ff-label">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password" class="ff-input mt-1.5">
+            <input type="password" id="password" name="password" required autocomplete="current-password" class="ff-input">
         </div>
 
         <div class="flex items-center justify-between">
@@ -26,6 +34,4 @@
 
         <button type="submit" class="ff-btn-primary w-full">Sign in</button>
     </form>
-
-    <p class="mt-6 text-center text-xs text-slate-400">Preview mode — install Breeze for live authentication.</p>
 </x-guest-layout>

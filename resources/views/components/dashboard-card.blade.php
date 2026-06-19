@@ -3,7 +3,7 @@
     'description' => null,
 ])
 
-<div {{ $attributes->merge(['class' => 'ff-card overflow-hidden']) }}>
+<div {{ $attributes->merge(['class' => 'ff-card-flat overflow-hidden']) }}>
     @if ($title || $description)
         <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
             @if ($title)

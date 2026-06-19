@@ -27,8 +27,9 @@
 @endphp
 
 <x-app-layout :role="'admin'">
-    {{-- Overview cards --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <x-page-header title="Admin Dashboard" description="Overview of customers, repairs, and revenue" />
+
+    <div class="ff-stats-grid-wide">
         <x-stat-card title="Total Customers" value="156" />
         <x-stat-card title="Total Technicians" value="8" />
         <x-stat-card title="Total Repair Requests" value="40" />
@@ -37,31 +38,30 @@
         <x-stat-card title="Total Revenue" value="$33,300" />
     </div>
 
-    <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {{-- Recent requests table --}}
+    <div class="ff-grid-sidebar mb-6">
         <div class="lg:col-span-2">
             <x-dashboard-card title="Recent Repair Requests" description="Latest requests across all customers">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                <div class="ff-table-wrap">
+                    <table class="ff-table min-w-full">
                         <thead>
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Customer</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Device</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Technician</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Priority</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Action</th>
+                                <th>Customer</th>
+                                <th>Device</th>
+                                <th>Technician</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th class="text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody>
                             @foreach ($recentRequests as $request)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{{ $request['customer'] }}</td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $request['device'] }}</td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $request['technician'] }}</td>
-                                    <td class="whitespace-nowrap px-4 py-3"><x-status-badge :status="$request['status']" /></td>
-                                    <td class="whitespace-nowrap px-4 py-3"><x-status-badge :status="$request['priority']" /></td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-right">
+                                <tr>
+                                    <td class="cell-strong">{{ $request['customer'] }}</td>
+                                    <td class="cell-muted">{{ $request['device'] }}</td>
+                                    <td class="cell-muted">{{ $request['technician'] }}</td>
+                                    <td><x-status-badge :status="$request['status']" /></td>
+                                    <td><x-status-badge :status="$request['priority']" /></td>
+                                    <td class="cell-action">
                                         <x-table-action-button :href="url('/repair-requests/1')">Manage</x-table-action-button>
                                     </td>
                                 </tr>
@@ -72,39 +72,31 @@
             </x-dashboard-card>
         </div>
 
-        {{-- Reports section --}}
-        <div class="space-y-6">
+        <div class="ff-section">
             <x-dashboard-card title="Repairs by Status">
-                <div class="space-y-3">
+                <div class="space-y-4">
                     @foreach ($statusSummary as $item)
-                        <div>
-                            <div class="mb-1 flex items-center justify-between text-sm">
-                                <span class="text-gray-600">{{ $item['label'] }}</span>
-                                <span class="font-medium text-gray-900">{{ $item['count'] }}</span>
-                            </div>
-                            <div class="h-2 overflow-hidden rounded-full bg-gray-100">
-                                <div class="h-full rounded-full bg-indigo-500" style="width: {{ $item['percent'] }}%"></div>
-                            </div>
-                        </div>
+                        <x-progress-bar :label="$item['label']" :value="$item['count']" :percent="$item['percent']" />
                     @endforeach
                 </div>
             </x-dashboard-card>
 
             <x-dashboard-card title="Monthly Revenue">
-                <div class="flex items-end justify-between gap-2" style="height: 120px">
+                <div class="flex h-32 items-end justify-between gap-2">
                     @foreach ($monthlyRevenue as $item)
                         <div class="flex flex-1 flex-col items-center gap-1">
-                            <div class="w-full rounded-t bg-indigo-500" style="height: {{ ($item['amount'] / $maxRevenue) * 100 }}px"></div>
-                            <span class="text-xs text-gray-500">{{ $item['month'] }}</span>
+                            <div class="w-full rounded-t ff-progress-bar" style="height: {{ ($item['amount'] / $maxRevenue) * 100 }}px"></div>
+                            <span class="text-xs text-slate-500">{{ $item['month'] }}</span>
                         </div>
                     @endforeach
                 </div>
-                <p class="mt-3 text-center text-sm text-gray-500">Jun total: <span class="font-semibold text-gray-900">$7,100</span></p>
+                <p class="mt-4 text-center text-sm text-slate-500">
+                    Jun total: <span class="font-semibold text-slate-900">$7,100</span>
+                </p>
             </x-dashboard-card>
         </div>
     </div>
 
-    {{-- Quick actions --}}
     <x-dashboard-card title="Quick Actions">
         <div class="flex flex-wrap gap-3">
             <a href="{{ url('/repair-requests') }}" class="ff-btn-primary">Manage Requests</a>

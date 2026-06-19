@@ -5,29 +5,39 @@
         <a href="{{ route('login') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">Sign in</a>
     </p>
 
-    <form class="mt-8 space-y-5" action="{{ url('/dashboard/customer') }}" method="GET">
-        <div>
+    <form class="mt-8 space-y-5" action="{{ route('register') }}" method="POST">
+        @csrf
+
+        @if ($errors->any())
+            <div class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">
+                <ul class="list-disc space-y-1 pl-4">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <div class="ff-field">
             <label for="name" class="ff-label">Full name</label>
-            <input type="text" id="name" name="name" required autocomplete="name" class="ff-input mt-1.5">
+            <input type="text" id="name" name="name" value="{{ old('name') }}" required autocomplete="name" class="ff-input">
         </div>
 
-        <div>
+        <div class="ff-field">
             <label for="email" class="ff-label">Email address</label>
-            <input type="email" id="email" name="email" required autocomplete="username" class="ff-input mt-1.5">
+            <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="username" class="ff-input">
         </div>
 
-        <div>
+        <div class="ff-field">
             <label for="password" class="ff-label">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="new-password" class="ff-input mt-1.5">
+            <input type="password" id="password" name="password" required autocomplete="new-password" class="ff-input">
         </div>
 
-        <div>
+        <div class="ff-field">
             <label for="password_confirmation" class="ff-label">Confirm password</label>
-            <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password" class="ff-input mt-1.5">
+            <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password" class="ff-input">
         </div>
 
         <button type="submit" class="ff-btn-primary w-full">Create account</button>
     </form>
-
-    <p class="mt-6 text-center text-xs text-slate-400">Preview mode — install Breeze for live registration.</p>
 </x-guest-layout>
