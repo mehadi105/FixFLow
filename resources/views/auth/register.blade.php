@@ -29,6 +29,14 @@
         </div>
 
         <div class="ff-field">
+            <label for="role" class="ff-label">I am a</label>
+            <select id="role" name="role" required class="ff-input">
+                <option value="customer" @selected(old('role', 'customer') === 'customer')>Customer — I want to get a device repaired</option>
+                <option value="technician" @selected(old('role') === 'technician')>Technician — I repair devices</option>
+            </select>
+        </div>
+
+        <div class="ff-field">
             <label for="password" class="ff-label">Password</label>
             <input type="password" id="password" name="password" required autocomplete="new-password" class="ff-input">
         </div>

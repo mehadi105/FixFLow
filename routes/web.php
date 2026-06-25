@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RepairRequestController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +33,7 @@ Route::middleware('guest')->group(function () {
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            return redirect()->intended(route('dashboard.customer'));
+            return redirect()->intended(route($request->user()->dashboardRoute()));
         }
 
         return back()->withErrors([
@@ -47,19 +49,21 @@ Route::middleware('guest')->group(function () {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'role' => ['required', 'in:customer,technician'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'role' => $validated['role'],
             'password' => Hash::make($validated['password']),
         ]);
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard.customer');
+        return redirect()->route($user->dashboardRoute());
     });
 });
 
@@ -73,48 +77,58 @@ Route::post('/logout', function (Request $request) {
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated Routes (static Blade previews)
+| Authenticated Routes
 |--------------------------------------------------------------------------
 */
 
 Route::middleware('auth')->group(function () {
-    Route::redirect('/dashboard', '/dashboard/customer');
+    Route::get('/dashboard', [DashboardController::class, 'redirect']);
 
-    Route::view('/dashboard/customer', 'dashboard.customer', ['role' => 'customer'])
+    Route::get('/dashboard/customer', [DashboardController::class, 'customer'])
+        ->middleware('role:customer')
         ->name('dashboard.customer');
 
-    Route::view('/dashboard/admin', 'dashboard.admin', ['role' => 'admin'])
+    Route::get('/dashboard/admin', [DashboardController::class, 'admin'])
+        ->middleware('role:admin')
         ->name('dashboard.admin');
 
-    Route::view('/dashboard/technician', 'dashboard.technician', ['role' => 'technician'])
+    Route::get('/dashboard/technician', [DashboardController::class, 'technician'])
+        ->middleware('role:technician')
         ->name('dashboard.technician');
 
-    Route::view('/repair-requests', 'repair-requests.index', ['role' => 'customer'])
+    /*
+    | Repair Requests (Module 2)
+    */
+    Route::get('/repair-requests', [RepairRequestController::class, 'index'])
         ->name('repair-requests.index');
 
-    Route::view('/repair-requests/create', 'repair-requests.create', ['role' => 'customer'])
+    Route::get('/repair-requests/create', [RepairRequestController::class, 'create'])
+        ->middleware('role:customer')
         ->name('repair-requests.create');
 
-    Route::get('/repair-requests/{id}', function (string $id) {
-        return view('repair-requests.show', [
-            'role' => 'customer',
-            'id' => $id,
-        ]);
-    })->name('repair-requests.show');
+    Route::post('/repair-requests', [RepairRequestController::class, 'store'])
+        ->middleware('role:customer')
+        ->name('repair-requests.store');
 
-    Route::view('/invoices', 'invoices.index', ['role' => 'customer'])
-        ->name('invoices.index');
+    Route::get('/repair-requests/{repairRequest}', [RepairRequestController::class, 'show'])
+        ->name('repair-requests.show');
 
-    Route::get('/invoices/{id}', function (string $id) {
-        return view('invoices.show', [
-            'role' => 'customer',
-            'id' => $id,
-        ]);
+    /*
+    | Static previews (to be implemented in later modules)
+    */
+    Route::get('/invoices', function (Request $request) {
+        return view('invoices.index', ['role' => $request->user()->role]);
+    })->name('invoices.index');
+
+    Route::get('/invoices/{id}', function (Request $request, string $id) {
+        return view('invoices.show', ['role' => $request->user()->role, 'id' => $id]);
     })->name('invoices.show');
 
-    Route::view('/warranties', 'warranties.index', ['role' => 'customer'])
-        ->name('warranties.index');
+    Route::get('/warranties', function (Request $request) {
+        return view('warranties.index', ['role' => $request->user()->role]);
+    })->name('warranties.index');
 
-    Route::view('/reports', 'reports.index', ['role' => 'admin'])
-        ->name('reports.index');
+    Route::get('/reports', function () {
+        return view('reports.index', ['role' => 'admin']);
+    })->middleware('role:admin')->name('reports.index');
 });
