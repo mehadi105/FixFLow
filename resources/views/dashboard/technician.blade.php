@@ -1,11 +1,4 @@
 @php
-    $assignedJobs = [
-        ['id' => 'JOB-2041', 'customer' => 'Sarah Ahmed', 'device' => 'iPhone 14 Pro', 'issue' => 'Cracked screen replacement', 'status' => 'Repairing', 'priority' => 'High'],
-        ['id' => 'JOB-2038', 'customer' => 'James Wilson', 'device' => 'MacBook Pro 16"', 'issue' => 'Logic board diagnosis', 'status' => 'Diagnosing', 'priority' => 'Medium'],
-        ['id' => 'JOB-2035', 'customer' => 'Robert Kim', 'device' => 'HP Pavilion', 'issue' => 'HDD replacement', 'status' => 'Assigned', 'priority' => 'Low'],
-        ['id' => 'JOB-2032', 'customer' => 'Lisa Park', 'device' => 'Google Pixel 8', 'issue' => 'Charging port repair', 'status' => 'Waiting for Parts', 'priority' => 'Medium'],
-    ];
-
     $todaysTasks = [
         ['time' => '09:00 AM', 'task' => 'Diagnose MacBook Pro — JOB-2038', 'done' => true],
         ['time' => '11:30 AM', 'task' => 'Replace iPhone screen — JOB-2041', 'done' => false],
@@ -18,10 +11,10 @@
     <x-page-header title="Technician Dashboard" description="Your assigned jobs and daily tasks" />
 
     <div class="ff-stats-grid">
-        <x-stat-card title="Assigned Jobs" value="7" />
-        <x-stat-card title="In Progress" value="3" />
-        <x-stat-card title="Completed Today" value="2" />
-        <x-stat-card title="Waiting for Parts" value="1" />
+        <x-stat-card title="Assigned Jobs" :value="$stats['assigned']" />
+        <x-stat-card title="In Progress" :value="$stats['inProgress']" />
+        <x-stat-card title="Completed" :value="$stats['completed']" />
+        <x-stat-card title="Waiting for Parts" value="0" />
     </div>
 
     <div class="ff-grid-sidebar">
@@ -41,27 +34,29 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($assignedJobs as $job)
+                            @forelse ($jobs as $job)
                                 <tr>
-                                    <td class="cell-id">{{ $job['id'] }}</td>
-                                    <td class="cell-strong">{{ $job['customer'] }}</td>
-                                    <td class="cell-muted">{{ $job['device'] }}</td>
-                                    <td class="cell-truncate">{{ $job['issue'] }}</td>
-                                    <td><x-status-badge :status="$job['status']" /></td>
-                                    <td><x-status-badge :status="$job['priority']" /></td>
+                                    <td class="cell-id">{{ $job->reference }}</td>
+                                    <td class="cell-strong">{{ $job->customer->name }}</td>
+                                    <td class="cell-muted">{{ $job->device_label }}</td>
+                                    <td class="cell-truncate">{{ $job->issue_description }}</td>
+                                    <td><x-status-badge :status="$job->status" /></td>
+                                    <td><x-status-badge :status="$job->priority" /></td>
                                     <td class="cell-action">
-                                        <x-table-action-button :href="url('/repair-requests/1')">View</x-table-action-button>
+                                        <x-table-action-button :href="route('repair-requests.show', $job)">View</x-table-action-button>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="px-4 py-10 text-center text-sm text-slate-500">No jobs assigned to you yet.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
                 <div class="ff-card-actions-inline">
-                    <a href="{{ url('/repair-requests/1') }}" class="ff-btn-primary">View Job</a>
-                    <a href="#" class="ff-btn-secondary">Add Diagnosis</a>
-                    <a href="#" class="ff-btn-secondary">Update Status</a>
+                    <a href="{{ route('repair-requests.index') }}" class="ff-btn-primary">View All Jobs</a>
                 </div>
             </x-dashboard-card>
         </div>

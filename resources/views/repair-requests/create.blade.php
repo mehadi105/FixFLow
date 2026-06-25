@@ -6,7 +6,17 @@
     </x-page-header>
 
     <x-dashboard-card>
-        <form action="#" method="POST" enctype="multipart/form-data" class="space-y-6">
+        @if ($errors->any())
+            <div class="mb-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">
+                <ul class="list-disc space-y-1 pl-4">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form action="{{ route('repair-requests.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
 
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -14,41 +24,39 @@
                     <label for="device_type" class="ff-label">Device Type</label>
                     <select id="device_type" name="device_type" class="ff-input">
                         <option value="">Select device type</option>
-                        <option value="smartphone">Smartphone</option>
-                        <option value="laptop">Laptop</option>
-                        <option value="tablet">Tablet</option>
-                        <option value="desktop">Desktop</option>
-                        <option value="other">Other</option>
+                        @foreach (['Smartphone', 'Laptop', 'Tablet', 'Desktop', 'Other'] as $type)
+                            <option value="{{ $type }}" @selected(old('device_type') === $type)>{{ $type }}</option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div class="ff-field">
                     <label for="priority" class="ff-label">Priority</label>
                     <select id="priority" name="priority" class="ff-input">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
+                        <option value="low" @selected(old('priority') === 'low')>Low</option>
+                        <option value="medium" @selected(old('priority', 'medium') === 'medium')>Medium</option>
+                        <option value="high" @selected(old('priority') === 'high')>High</option>
                     </select>
                 </div>
 
                 <div class="ff-field">
                     <label for="brand" class="ff-label">Brand</label>
-                    <input type="text" id="brand" name="brand" placeholder="e.g. Apple, Samsung, Dell" class="ff-input">
+                    <input type="text" id="brand" name="brand" value="{{ old('brand') }}" placeholder="e.g. Apple, Samsung, Dell" class="ff-input">
                 </div>
 
                 <div class="ff-field">
                     <label for="model" class="ff-label">Model</label>
-                    <input type="text" id="model" name="model" placeholder="e.g. iPhone 14 Pro, MacBook Air M2" class="ff-input">
+                    <input type="text" id="model" name="model" value="{{ old('model') }}" placeholder="e.g. iPhone 14 Pro, MacBook Air M2" class="ff-input">
                 </div>
 
                 <div class="ff-field sm:col-span-2">
                     <label for="serial_number" class="ff-label">Serial Number</label>
-                    <input type="text" id="serial_number" name="serial_number" placeholder="Device serial number (if available)" class="ff-input">
+                    <input type="text" id="serial_number" name="serial_number" value="{{ old('serial_number') }}" placeholder="Device serial number (if available)" class="ff-input">
                 </div>
 
                 <div class="ff-field sm:col-span-2">
                     <label for="issue_description" class="ff-label">Issue Description</label>
-                    <textarea id="issue_description" name="issue_description" rows="4" placeholder="Describe the problem in detail..." class="ff-input"></textarea>
+                    <textarea id="issue_description" name="issue_description" rows="4" placeholder="Describe the problem in detail..." class="ff-input">{{ old('issue_description') }}</textarea>
                 </div>
 
                 <div class="ff-field sm:col-span-2">

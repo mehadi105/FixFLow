@@ -15,11 +15,11 @@
       <details class="relative">
         <summary class="flex cursor-pointer list-none items-center gap-x-3 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-colors hover:bg-white [&::-webkit-details-marker]:hidden">
           <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-md shadow-indigo-500/25">
-            J
+            {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
           </span>
           <span class="hidden text-left sm:block">
-            <span class="block text-sm font-semibold text-slate-900">John Customer</span>
-            <span class="block text-xs capitalize text-slate-500">{{ $role ?? 'customer' }}</span>
+            <span class="block text-sm font-semibold text-slate-900">{{ auth()->user()->name ?? 'User' }}</span>
+            <span class="block text-xs capitalize text-slate-500">{{ auth()->user()->role ?? ($role ?? 'customer') }}</span>
           </span>
           <svg class="hidden h-4 w-4 text-slate-400 sm:block" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />

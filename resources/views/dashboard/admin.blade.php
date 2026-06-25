@@ -1,20 +1,4 @@
 @php
-    $recentRequests = [
-        ['customer' => 'Sarah Ahmed', 'device' => 'iPhone 14 Pro', 'technician' => 'Mike Torres', 'status' => 'Repairing', 'priority' => 'High'],
-        ['customer' => 'James Wilson', 'device' => 'MacBook Pro 16"', 'technician' => 'Lisa Chen', 'status' => 'Diagnosing', 'priority' => 'Medium'],
-        ['customer' => 'Emily Davis', 'device' => 'Samsung S24 Ultra', 'technician' => 'Unassigned', 'status' => 'Pending', 'priority' => 'High'],
-        ['customer' => 'Robert Kim', 'device' => 'HP Pavilion', 'technician' => 'Mike Torres', 'status' => 'Assigned', 'priority' => 'Low'],
-        ['customer' => 'Anna Martinez', 'device' => 'iPad Pro 12.9"', 'technician' => 'Lisa Chen', 'status' => 'Completed', 'priority' => 'Medium'],
-    ];
-
-    $statusSummary = [
-        ['label' => 'Pending', 'count' => 8, 'percent' => 20],
-        ['label' => 'Assigned', 'count' => 6, 'percent' => 15],
-        ['label' => 'Diagnosing', 'count' => 5, 'percent' => 12],
-        ['label' => 'Repairing', 'count' => 10, 'percent' => 25],
-        ['label' => 'Completed', 'count' => 11, 'percent' => 28],
-    ];
-
     $monthlyRevenue = [
         ['month' => 'Jan', 'amount' => 4200],
         ['month' => 'Feb', 'amount' => 5100],
@@ -24,18 +8,19 @@
         ['month' => 'Jun', 'amount' => 7100],
     ];
     $maxRevenue = max(array_column($monthlyRevenue, 'amount'));
+    $statusTotal = array_sum($statusCounts);
 @endphp
 
 <x-app-layout :role="'admin'">
     <x-page-header title="Admin Dashboard" description="Overview of customers, repairs, and revenue" />
 
     <div class="ff-stats-grid-wide">
-        <x-stat-card title="Total Customers" value="156" />
-        <x-stat-card title="Total Technicians" value="8" />
-        <x-stat-card title="Total Repair Requests" value="40" />
-        <x-stat-card title="Pending Repairs" value="8" />
-        <x-stat-card title="Completed Repairs" value="11" />
-        <x-stat-card title="Total Revenue" value="$33,300" />
+        <x-stat-card title="Total Customers" :value="$stats['customers']" />
+        <x-stat-card title="Total Technicians" :value="$stats['technicians']" />
+        <x-stat-card title="Total Repair Requests" :value="$stats['total']" />
+        <x-stat-card title="Pending Repairs" :value="$stats['pending']" />
+        <x-stat-card title="Completed Repairs" :value="$stats['completed']" />
+        <x-stat-card title="Total Revenue" value="$0" />
     </div>
 
     <div class="ff-grid-sidebar mb-6">
@@ -54,18 +39,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($recentRequests as $request)
+                            @forelse ($recentRequests as $request)
                                 <tr>
-                                    <td class="cell-strong">{{ $request['customer'] }}</td>
-                                    <td class="cell-muted">{{ $request['device'] }}</td>
-                                    <td class="cell-muted">{{ $request['technician'] }}</td>
-                                    <td><x-status-badge :status="$request['status']" /></td>
-                                    <td><x-status-badge :status="$request['priority']" /></td>
+                                    <td class="cell-strong">{{ $request->customer->name }}</td>
+                                    <td class="cell-muted">{{ $request->device_label }}</td>
+                                    <td class="cell-muted">{{ $request->technician?->name ?? 'Unassigned' }}</td>
+                                    <td><x-status-badge :status="$request->status" /></td>
+                                    <td><x-status-badge :status="$request->priority" /></td>
                                     <td class="cell-action">
-                                        <x-table-action-button :href="url('/repair-requests/1')">Manage</x-table-action-button>
+                                        <x-table-action-button :href="route('repair-requests.show', $request)">Manage</x-table-action-button>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">No repair requests yet.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -75,8 +64,12 @@
         <div class="ff-section">
             <x-dashboard-card title="Repairs by Status">
                 <div class="space-y-4">
-                    @foreach ($statusSummary as $item)
-                        <x-progress-bar :label="$item['label']" :value="$item['count']" :percent="$item['percent']" />
+                    @foreach ($statusCounts as $label => $count)
+                        <x-progress-bar
+                            :label="ucfirst($label)"
+                            :value="$count"
+                            :percent="$statusTotal > 0 ? round(($count / $statusTotal) * 100) : 0"
+                        />
                     @endforeach
                 </div>
             </x-dashboard-card>
