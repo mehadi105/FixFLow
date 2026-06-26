@@ -8,6 +8,10 @@
         'repairing' => 'Repairing',
         'completed' => 'Completed',
     ];
+
+    $authUser = auth()->user();
+    $canWork = $authUser->isAdmin()
+        || ($authUser->isTechnician() && $repairRequest->technician_id === $authUser->id);
 @endphp
 
 <x-app-layout :role="$role ?? 'customer'">
@@ -84,6 +88,23 @@
         </div>
 
         <div class="ff-section">
+            @if ($canWork)
+                <x-dashboard-card title="Update Status">
+                    <form method="POST" action="{{ route('repair-requests.status', $repairRequest) }}" class="space-y-3">
+                        @csrf
+                        <div class="ff-field">
+                            <label for="status" class="ff-label">Repair status</label>
+                            <select id="status" name="status" class="ff-input">
+                                @foreach ($statuses as $statusOption)
+                                    <option value="{{ $statusOption }}" @selected($repairRequest->status === $statusOption)>{{ ucfirst($statusOption) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="submit" class="ff-btn-primary w-full">Save Status</button>
+                    </form>
+                </x-dashboard-card>
+            @endif
+
             <x-dashboard-card title="Technician Assignment">
                 @if ($repairRequest->technician)
                     <div class="flex items-center gap-3">
@@ -98,12 +119,39 @@
                 @else
                     <p class="text-sm text-slate-500">No technician assigned yet.</p>
                 @endif
-                <p class="ff-placeholder-note">Assignment management arrives in a later module.</p>
+
+                @if ($authUser->isAdmin())
+                    <form method="POST" action="{{ route('repair-requests.assign', $repairRequest) }}" class="mt-4 space-y-3">
+                        @csrf
+                        <div class="ff-field">
+                            <label for="technician_id" class="ff-label">{{ $repairRequest->technician ? 'Reassign technician' : 'Assign technician' }}</label>
+                            <select id="technician_id" name="technician_id" class="ff-input" required>
+                                <option value="">Select a technician</option>
+                                @foreach ($technicians as $technician)
+                                    <option value="{{ $technician->id }}" @selected($repairRequest->technician_id === $technician->id)>{{ $technician->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="submit" class="ff-btn-primary w-full">{{ $repairRequest->technician ? 'Reassign' : 'Assign' }}</button>
+                    </form>
+                @endif
             </x-dashboard-card>
 
             <x-dashboard-card title="Diagnosis Notes">
-                <p class="text-sm text-slate-500">No diagnosis notes yet.</p>
-                <p class="ff-placeholder-note">Placeholder — connect to diagnosis notes module later.</p>
+                @if ($canWork)
+                    <form method="POST" action="{{ route('repair-requests.diagnosis', $repairRequest) }}" class="space-y-3">
+                        @csrf
+                        <div class="ff-field">
+                            <label for="diagnosis_notes" class="sr-only">Diagnosis notes</label>
+                            <textarea id="diagnosis_notes" name="diagnosis_notes" rows="4" placeholder="Add diagnosis notes..." class="ff-input">{{ old('diagnosis_notes', $repairRequest->diagnosis_notes) }}</textarea>
+                        </div>
+                        <button type="submit" class="ff-btn-primary w-full">Save Notes</button>
+                    </form>
+                @else
+                    <p class="text-sm {{ $repairRequest->diagnosis_notes ? 'text-slate-700' : 'text-slate-500' }}">
+                        {{ $repairRequest->diagnosis_notes ?? 'No diagnosis notes yet.' }}
+                    </p>
+                @endif
             </x-dashboard-card>
 
             <x-dashboard-card title="Invoice">

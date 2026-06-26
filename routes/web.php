@@ -113,6 +113,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/repair-requests/{repairRequest}', [RepairRequestController::class, 'show'])
         ->name('repair-requests.show');
 
+    // Technician workflow (Module 3)
+    Route::post('/repair-requests/{repairRequest}/assign', [RepairRequestController::class, 'assignTechnician'])
+        ->middleware('role:admin')
+        ->name('repair-requests.assign');
+
+    Route::post('/repair-requests/{repairRequest}/status', [RepairRequestController::class, 'updateStatus'])
+        ->middleware('role:admin,technician')
+        ->name('repair-requests.status');
+
+    Route::post('/repair-requests/{repairRequest}/diagnosis', [RepairRequestController::class, 'updateDiagnosis'])
+        ->middleware('role:admin,technician')
+        ->name('repair-requests.diagnosis');
+
     /*
     | Static previews (to be implemented in later modules)
     */

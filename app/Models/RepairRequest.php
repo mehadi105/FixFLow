@@ -38,6 +38,7 @@ class RepairRequest extends Model
         'model',
         'serial_number',
         'issue_description',
+        'diagnosis_notes',
         'priority',
         'status',
         'image_path',

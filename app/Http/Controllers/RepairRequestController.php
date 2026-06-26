@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\RepairRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RepairRequestController extends Controller
@@ -110,6 +112,84 @@ class RepairRequestController extends Controller
         return view('repair-requests.show', [
             'role' => $user->role,
             'repairRequest' => $repairRequest,
+            // Technicians available for assignment (admins only need this list).
+            'technicians' => $user->isAdmin()
+                ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
+                : collect(),
         ]);
+    }
+
+    /**
+     * Assign a technician to a request (admins only).
+     */
+    public function assignTechnician(Request $request, RepairRequest $repairRequest): RedirectResponse
+    {
+        $validated = $request->validate([
+            'technician_id' => [
+                'required',
+                Rule::exists('users', 'id')->where('role', User::ROLE_TECHNICIAN),
+            ],
+        ]);
+
+        $repairRequest->technician_id = $validated['technician_id'];
+
+        // Move a brand-new request forward once it has an owner.
+        if ($repairRequest->status === RepairRequest::STATUS_PENDING) {
+            $repairRequest->status = RepairRequest::STATUS_ASSIGNED;
+        }
+
+        $repairRequest->save();
+
+        return back()->with('status', 'Technician assigned successfully.');
+    }
+
+    /**
+     * Update the repair status (assigned technician or admin).
+     */
+    public function updateStatus(Request $request, RepairRequest $repairRequest): RedirectResponse
+    {
+        $this->authorizeWorker($request, $repairRequest);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(RepairRequest::STATUSES)],
+        ]);
+
+        $repairRequest->update(['status' => $validated['status']]);
+
+        return back()->with('status', 'Repair status updated.');
+    }
+
+    /**
+     * Save diagnosis notes (assigned technician or admin).
+     */
+    public function updateDiagnosis(Request $request, RepairRequest $repairRequest): RedirectResponse
+    {
+        $this->authorizeWorker($request, $repairRequest);
+
+        $validated = $request->validate([
+            'diagnosis_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $repairRequest->update(['diagnosis_notes' => $validated['diagnosis_notes']]);
+
+        return back()->with('status', 'Diagnosis notes saved.');
+    }
+
+    /**
+     * Only an admin or the assigned technician may update a request.
+     */
+    private function authorizeWorker(Request $request, RepairRequest $repairRequest): void
+    {
+        $user = $request->user();
+
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        if ($user->isTechnician() && $repairRequest->technician_id === $user->id) {
+            return;
+        }
+
+        abort(403);
     }
 }
