@@ -1,13 +1,27 @@
 <x-app-layout :role="$role ?? 'customer'">
-    <x-page-header title="Invoice #INV-2026-0095" description="Issued on Jun 18, 2026">
+    <x-page-header title="Invoice {{ $invoice->invoice_number }}" description="Issued on {{ $invoice->created_at->format('M d, Y') }}">
         <x-slot name="actions">
-            <button type="button" onclick="window.print()" class="ff-btn-secondary">
+            @if (auth()->user()->isAdmin())
+                <form method="POST" action="{{ route('invoices.mark-paid', $invoice) }}" class="print:hidden">
+                    @csrf
+                    <button type="submit" class="{{ $invoice->isPaid() ? 'ff-btn-secondary' : 'ff-btn-primary' }}">
+                        {{ $invoice->isPaid() ? 'Mark as Unpaid' : 'Mark as Paid' }}
+                    </button>
+                </form>
+            @endif
+            <button type="button" onclick="window.print()" class="ff-btn-secondary print:hidden">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.22H7.231c-.662 0-1.18-.568-1.12-1.22L6.34 18m11.318 0h1.091a2.25 2.25 0 002.25-2.25V9.75a2.25 2.25 0 00-2.25-2.25h-1.091M6.34 18H5.25A2.25 2.25 0 003 15.75V9.75A2.25 2.25 0 015.25 7.5h1.091m11.318 0H18a2.25 2.25 0 012.25 2.25v6a2.25 2.25 0 01-2.25 2.25h-1.091" /></svg>
                 Print
             </button>
-            <x-back-link :href="url('/invoices')" />
+            <x-back-link :href="route('invoices.index')" />
         </x-slot>
     </x-page-header>
+
+    @if (session('status'))
+        <div class="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 ring-1 ring-emerald-200 print:hidden">
+            {{ session('status') }}
+        </div>
+    @endif
 
     <div class="mx-auto max-w-3xl">
         <div class="ff-card-flat p-6 sm:p-8 print:shadow-none print:ring-0">
@@ -19,25 +33,22 @@
                 </div>
                 <div class="sm:text-right">
                     <p class="text-lg font-semibold text-slate-900">INVOICE</p>
-                    <p class="mt-1 text-sm text-slate-600">#INV-2026-0095</p>
-                    <div class="mt-2"><x-status-badge status="Paid" /></div>
+                    <p class="mt-1 text-sm text-slate-600">{{ $invoice->invoice_number }}</p>
+                    <div class="mt-2"><x-status-badge :status="$invoice->payment_status" /></div>
                 </div>
             </div>
 
             <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                     <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Bill To</h3>
-                    <p class="mt-2 text-sm font-medium text-slate-900">Sarah Ahmed</p>
-                    <p class="text-sm text-slate-600">sarah@example.com</p>
-                    <p class="text-sm text-slate-600">+1 (555) 987-6543</p>
-                    <p class="text-sm text-slate-600">456 Oak Ave, Cityville</p>
+                    <p class="mt-2 text-sm font-medium text-slate-900">{{ $invoice->customer->name }}</p>
+                    <p class="text-sm text-slate-600">{{ $invoice->customer->email }}</p>
                 </div>
                 <div>
                     <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Repair Details</h3>
-                    <p class="mt-2 text-sm text-slate-600">Request ID: <span class="font-medium text-slate-900">RR-1042</span></p>
-                    <p class="text-sm text-slate-600">Device: <span class="font-medium text-slate-900">Apple iPhone 14 Pro</span></p>
-                    <p class="text-sm text-slate-600">Service: <span class="font-medium text-slate-900">Screen replacement</span></p>
-                    <p class="text-sm text-slate-600">Technician: <span class="font-medium text-slate-900">Mike Torres</span></p>
+                    <p class="mt-2 text-sm text-slate-600">Request ID: <span class="font-medium text-slate-900">{{ $invoice->repairRequest->reference }}</span></p>
+                    <p class="text-sm text-slate-600">Device: <span class="font-medium text-slate-900">{{ $invoice->repairRequest->device_label }}</span></p>
+                    <p class="text-sm text-slate-600">Technician: <span class="font-medium text-slate-900">{{ $invoice->repairRequest->technician?->name ?? 'Unassigned' }}</span></p>
                 </div>
             </div>
 
@@ -51,26 +62,28 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="text-slate-900">Service Charge — Screen replacement labor</td>
-                            <td class="text-right text-slate-900">$89.00</td>
+                            <td class="text-slate-900">Service Charge — repair labor</td>
+                            <td class="text-right text-slate-900">${{ number_format($invoice->service_charge, 2) }}</td>
                         </tr>
                         <tr>
-                            <td class="text-slate-900">Parts Cost — LCD + digitizer assembly</td>
-                            <td class="text-right text-slate-900">$120.00</td>
+                            <td class="text-slate-900">Parts Cost — replacement components</td>
+                            <td class="text-right text-slate-900">${{ number_format($invoice->parts_cost, 2) }}</td>
                         </tr>
-                        <tr>
-                            <td class="text-slate-900">Discount — Loyalty customer</td>
-                            <td class="text-right text-rose-600">-$20.00</td>
-                        </tr>
+                        @if ((float) $invoice->discount > 0)
+                            <tr>
+                                <td class="text-slate-900">Discount</td>
+                                <td class="text-right text-rose-600">-${{ number_format($invoice->discount, 2) }}</td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
 
             <div class="mt-6 flex justify-end border-t border-slate-200 pt-4">
                 <dl class="w-full max-w-xs space-y-2">
-                    <div class="flex justify-between text-sm"><dt class="text-slate-500">Subtotal</dt><dd class="text-slate-900">$209.00</dd></div>
-                    <div class="flex justify-between text-sm"><dt class="text-slate-500">Discount</dt><dd class="text-rose-600">-$20.00</dd></div>
-                    <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold"><dt class="text-slate-900">Total Amount</dt><dd class="text-indigo-600">$189.00</dd></div>
+                    <div class="flex justify-between text-sm"><dt class="text-slate-500">Subtotal</dt><dd class="text-slate-900">${{ number_format($invoice->subtotal, 2) }}</dd></div>
+                    <div class="flex justify-between text-sm"><dt class="text-slate-500">Discount</dt><dd class="text-rose-600">-${{ number_format($invoice->discount, 2) }}</dd></div>
+                    <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold"><dt class="text-slate-900">Total Amount</dt><dd class="text-indigo-600">${{ number_format($invoice->total, 2) }}</dd></div>
                 </dl>
             </div>
 

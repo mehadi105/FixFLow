@@ -107,7 +107,7 @@ class RepairRequestController extends Controller
             abort(403);
         }
 
-        $repairRequest->load(['customer', 'technician']);
+        $repairRequest->load(['customer', 'technician', 'invoice']);
 
         return view('repair-requests.show', [
             'role' => $user->role,

@@ -20,7 +20,7 @@
         <x-stat-card title="Total Repair Requests" :value="$stats['total']" />
         <x-stat-card title="Pending Repairs" :value="$stats['pending']" />
         <x-stat-card title="Completed Repairs" :value="$stats['completed']" />
-        <x-stat-card title="Total Revenue" value="$0" />
+        <x-stat-card title="Total Revenue" :value="'$'.number_format($stats['revenue'], 2)" />
     </div>
 
     <div class="ff-grid-sidebar mb-6">
@@ -94,7 +94,7 @@
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('repair-requests.index') }}" class="ff-btn-primary">Manage Requests</a>
             <a href="{{ route('repair-requests.index') }}" class="ff-btn-secondary">Assign Technician</a>
-            <a href="{{ url('/invoices') }}" class="ff-btn-secondary">Create Invoice</a>
+            <a href="{{ route('invoices.create') }}" class="ff-btn-secondary">Create Invoice</a>
             <a href="{{ url('/reports') }}" class="ff-btn-secondary">View Reports</a>
         </div>
     </x-dashboard-card>
