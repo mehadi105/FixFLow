@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\RepairRequestController;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -127,16 +128,29 @@ Route::middleware('auth')->group(function () {
         ->name('repair-requests.diagnosis');
 
     /*
+    | Invoices (Module 4)
+    */
+    Route::get('/invoices', [InvoiceController::class, 'index'])
+        ->name('invoices.index');
+
+    Route::get('/invoices/create', [InvoiceController::class, 'create'])
+        ->middleware('role:admin')
+        ->name('invoices.create');
+
+    Route::post('/invoices', [InvoiceController::class, 'store'])
+        ->middleware('role:admin')
+        ->name('invoices.store');
+
+    Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])
+        ->name('invoices.show');
+
+    Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])
+        ->middleware('role:admin')
+        ->name('invoices.mark-paid');
+
+    /*
     | Static previews (to be implemented in later modules)
     */
-    Route::get('/invoices', function (Request $request) {
-        return view('invoices.index', ['role' => $request->user()->role]);
-    })->name('invoices.index');
-
-    Route::get('/invoices/{id}', function (Request $request, string $id) {
-        return view('invoices.show', ['role' => $request->user()->role, 'id' => $id]);
-    })->name('invoices.show');
-
     Route::get('/warranties', function (Request $request) {
         return view('warranties.index', ['role' => $request->user()->role]);
     })->name('warranties.index');

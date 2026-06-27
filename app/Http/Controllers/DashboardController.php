@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\RepairRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -50,6 +51,7 @@ class DashboardController extends Controller
                 'total' => RepairRequest::count(),
                 'pending' => RepairRequest::whereNot('status', RepairRequest::STATUS_COMPLETED)->count(),
                 'completed' => RepairRequest::where('status', RepairRequest::STATUS_COMPLETED)->count(),
+                'revenue' => (float) Invoice::where('payment_status', Invoice::STATUS_PAID)->sum('total'),
             ],
             'statusCounts' => $this->statusCounts(),
             'recentRequests' => RepairRequest::with(['customer', 'technician'])->latest()->take(6)->get(),

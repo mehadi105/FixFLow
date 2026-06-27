@@ -155,8 +155,19 @@
             </x-dashboard-card>
 
             <x-dashboard-card title="Invoice">
-                <p class="text-sm text-slate-500">No invoice generated yet.</p>
-                <p class="ff-placeholder-note">Placeholder — connect to invoice module later.</p>
+                @if ($repairRequest->invoice)
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">Invoice No</dt><dd class="font-medium text-slate-900">{{ $repairRequest->invoice->invoice_number }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Amount</dt><dd class="font-medium text-slate-900">${{ number_format($repairRequest->invoice->total, 2) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Status</dt><dd><x-status-badge :status="$repairRequest->invoice->payment_status" /></dd></div>
+                    </dl>
+                    <a href="{{ route('invoices.show', $repairRequest->invoice) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">View Invoice</a>
+                @elseif ($authUser->isAdmin())
+                    <p class="text-sm text-slate-500">No invoice generated yet.</p>
+                    <a href="{{ route('invoices.create', ['repair_request_id' => $repairRequest->id]) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Create Invoice</a>
+                @else
+                    <p class="text-sm text-slate-500">No invoice generated yet.</p>
+                @endif
             </x-dashboard-card>
 
             <x-dashboard-card title="Warranty">
