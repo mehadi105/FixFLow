@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\RepairRequestController;
+use App\Http\Controllers\WarrantyController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -149,12 +150,22 @@ Route::middleware('auth')->group(function () {
         ->name('invoices.mark-paid');
 
     /*
+    | Warranties (Module 5)
+    */
+    Route::get('/warranties', [WarrantyController::class, 'index'])
+        ->name('warranties.index');
+
+    Route::get('/warranties/create', [WarrantyController::class, 'create'])
+        ->middleware('role:admin')
+        ->name('warranties.create');
+
+    Route::post('/warranties', [WarrantyController::class, 'store'])
+        ->middleware('role:admin')
+        ->name('warranties.store');
+
+    /*
     | Static previews (to be implemented in later modules)
     */
-    Route::get('/warranties', function (Request $request) {
-        return view('warranties.index', ['role' => $request->user()->role]);
-    })->name('warranties.index');
-
     Route::get('/reports', function () {
         return view('reports.index', ['role' => 'admin']);
     })->middleware('role:admin')->name('reports.index');
