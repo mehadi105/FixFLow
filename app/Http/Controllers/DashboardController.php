@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\RepairRequest;
 use App\Models\User;
+use App\Models\Warranty;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -33,6 +34,7 @@ class DashboardController extends Controller
                 'total' => (clone $requests)->count(),
                 'pending' => (clone $requests)->whereNot('status', RepairRequest::STATUS_COMPLETED)->count(),
                 'completed' => (clone $requests)->where('status', RepairRequest::STATUS_COMPLETED)->count(),
+                'activeWarranty' => Warranty::where('user_id', $user->id)->whereDate('end_date', '>=', now())->count(),
             ],
             'recentRequests' => $user->repairRequests()->latest()->take(5)->get(),
         ]);

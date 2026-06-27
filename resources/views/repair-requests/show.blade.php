@@ -171,8 +171,18 @@
             </x-dashboard-card>
 
             <x-dashboard-card title="Warranty">
-                <p class="text-sm text-slate-500">No warranty issued yet.</p>
-                <p class="ff-placeholder-note">Placeholder — connect to warranty module later.</p>
+                @if ($repairRequest->warranty)
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">Warranty Code</dt><dd class="font-medium text-slate-900">{{ $repairRequest->warranty->warranty_code }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Coverage</dt><dd><x-status-badge :status="$repairRequest->warranty->status" /></dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Valid Until</dt><dd class="font-medium text-slate-900">{{ $repairRequest->warranty->end_date->format('M d, Y') }}</dd></div>
+                    </dl>
+                @elseif ($authUser->isAdmin())
+                    <p class="text-sm text-slate-500">No warranty issued yet.</p>
+                    <a href="{{ route('warranties.create', ['repair_request_id' => $repairRequest->id]) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Issue Warranty</a>
+                @else
+                    <p class="text-sm text-slate-500">No warranty issued yet.</p>
+                @endif
             </x-dashboard-card>
         </div>
     </div>

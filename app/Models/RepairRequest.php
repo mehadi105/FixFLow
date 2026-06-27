@@ -70,6 +70,14 @@ class RepairRequest extends Model
     }
 
     /**
+     * The warranty issued for this request (if any).
+     */
+    public function warranty(): HasOne
+    {
+        return $this->hasOne(Warranty::class);
+    }
+
+    /**
      * Human-friendly device label (e.g. "Apple iPhone 14 Pro").
      */
     public function getDeviceLabelAttribute(): string

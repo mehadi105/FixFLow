@@ -15,7 +15,7 @@
         <x-stat-card title="Total Requests" :value="$stats['total']" />
         <x-stat-card title="Pending Repairs" :value="$stats['pending']" />
         <x-stat-card title="Completed Repairs" :value="$stats['completed']" />
-        <x-stat-card title="Active Warranty" value="0" />
+        <x-stat-card title="Active Warranty" :value="$stats['activeWarranty']" />
     </div>
 
     <x-dashboard-card title="Recent Repair Requests" description="Your latest submitted repair requests">
