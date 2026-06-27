@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepairRequestController;
 use App\Http\Controllers\WarrantyController;
 use App\Models\User;
@@ -164,9 +165,9 @@ Route::middleware('auth')->group(function () {
         ->name('warranties.store');
 
     /*
-    | Static previews (to be implemented in later modules)
+    | Reports (Module 6)
     */
-    Route::get('/reports', function () {
-        return view('reports.index', ['role' => 'admin']);
-    })->middleware('role:admin')->name('reports.index');
+    Route::get('/reports', [ReportController::class, 'index'])
+        ->middleware('role:admin')
+        ->name('reports.index');
 });
