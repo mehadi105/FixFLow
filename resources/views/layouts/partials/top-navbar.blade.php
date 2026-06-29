@@ -25,10 +25,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
         </summary>
-        <div class="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200/80 bg-white py-1 shadow-xl shadow-slate-900/10">
-          <a href="#" class="block px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50">Profile</a>
-          <a href="#" class="block px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50">Settings</a>
-          <hr class="my-1 border-slate-100">
+        <div class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200/80 bg-white py-1 shadow-xl shadow-slate-900/10">
+          <div class="border-b border-slate-100 px-4 py-3">
+            <p class="truncate text-sm font-semibold text-slate-900">{{ auth()->user()->name ?? 'User' }}</p>
+            <p class="truncate text-xs text-slate-500">{{ auth()->user()->email ?? '' }}</p>
+          </div>
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="block w-full px-4 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-50">Log out</button>

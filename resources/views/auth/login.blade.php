@@ -24,12 +24,11 @@
             <input type="password" id="password" name="password" required autocomplete="current-password" class="ff-input">
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="flex items-center">
             <label class="flex items-center gap-2">
                 <input type="checkbox" name="remember" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/40">
                 <span class="text-sm text-slate-600">Remember me</span>
             </label>
-            <a href="#" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500">Forgot password?</a>
         </div>
 
         <button type="submit" class="ff-btn-primary w-full">Sign in</button>
