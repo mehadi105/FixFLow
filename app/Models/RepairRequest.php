@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RepairRequest extends Model
@@ -75,6 +76,34 @@ class RepairRequest extends Model
     public function warranty(): HasOne
     {
         return $this->hasOne(Warranty::class);
+    }
+
+    /**
+     * Chat messages on this repair request thread.
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * Whether the given user may access this request's chat thread.
+     */
+    public function hasChatParticipant(User $user): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isCustomer() && $this->user_id === $user->id) {
+            return true;
+        }
+
+        if ($user->isTechnician() && $this->technician_id === $user->id) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

@@ -51,6 +51,14 @@ class User extends Authenticatable
         return $this->hasMany(RepairRequest::class, 'technician_id');
     }
 
+    /**
+     * Chat messages sent by this user.
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class);
+    }
+
     public function isCustomer(): bool
     {
         return $this->role === self::ROLE_CUSTOMER;
