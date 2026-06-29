@@ -12,6 +12,7 @@
     $authUser = auth()->user();
     $canWork = $authUser->isAdmin()
         || ($authUser->isTechnician() && $repairRequest->technician_id === $authUser->id);
+    $canChat = $canChat ?? $repairRequest->hasChatParticipant($authUser);
 @endphp
 
 <x-app-layout :role="$role ?? 'customer'">
@@ -85,6 +86,12 @@
                     </div>
                 @endif
             </x-dashboard-card>
+
+            @if ($canChat)
+                <x-dashboard-card title="Conversation" description="Chat with everyone involved in this repair">
+                    <x-chat-panel :repair-request="$repairRequest" :messages="$messages" />
+                </x-dashboard-card>
+            @endif
         </div>
 
         <div class="ff-section">
