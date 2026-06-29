@@ -1,13 +1,5 @@
 @php
-    $monthlyRevenue = [
-        ['month' => 'Jan', 'amount' => 4200],
-        ['month' => 'Feb', 'amount' => 5100],
-        ['month' => 'Mar', 'amount' => 4800],
-        ['month' => 'Apr', 'amount' => 6200],
-        ['month' => 'May', 'amount' => 5900],
-        ['month' => 'Jun', 'amount' => 7100],
-    ];
-    $maxRevenue = max(array_column($monthlyRevenue, 'amount'));
+    $maxRevenue = max(array_map(fn ($m) => $m['amount'], $monthlyRevenue)) ?: 1;
     $statusTotal = array_sum($statusCounts);
 @endphp
 
@@ -74,17 +66,17 @@
                 </div>
             </x-dashboard-card>
 
-            <x-dashboard-card title="Monthly Revenue">
+            <x-dashboard-card title="Monthly Revenue" description="Paid invoices over the last 6 months">
                 <div class="flex h-32 items-end justify-between gap-2">
                     @foreach ($monthlyRevenue as $item)
                         <div class="flex flex-1 flex-col items-center gap-1">
                             <div class="w-full rounded-t ff-progress-bar" style="height: {{ ($item['amount'] / $maxRevenue) * 100 }}px"></div>
-                            <span class="text-xs text-slate-500">{{ $item['month'] }}</span>
+                            <span class="text-xs text-slate-500">{{ $item['label'] }}</span>
                         </div>
                     @endforeach
                 </div>
                 <p class="mt-4 text-center text-sm text-slate-500">
-                    Jun total: <span class="font-semibold text-slate-900">$7,100</span>
+                    {{ end($monthlyRevenue)['label'] }} total: <span class="font-semibold text-slate-900">${{ number_format(end($monthlyRevenue)['amount'], 2) }}</span>
                 </p>
             </x-dashboard-card>
         </div>

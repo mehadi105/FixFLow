@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepairRequestController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WarrantyController;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -170,4 +171,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', [ReportController::class, 'index'])
         ->middleware('role:admin')
         ->name('reports.index');
+
+    /*
+    | User management (admin)
+    */
+    Route::get('/users', [UserController::class, 'index'])
+        ->middleware('role:admin')
+        ->name('users.index');
+
+    Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])
+        ->middleware('role:admin')
+        ->name('users.update-role');
 });

@@ -56,6 +56,7 @@ class DashboardController extends Controller
                 'revenue' => (float) Invoice::where('payment_status', Invoice::STATUS_PAID)->sum('total'),
             ],
             'statusCounts' => $this->statusCounts(),
+            'monthlyRevenue' => $this->monthlyRevenue(),
             'recentRequests' => RepairRequest::with(['customer', 'technician'])->latest()->take(6)->get(),
         ]);
     }
@@ -80,6 +81,28 @@ class DashboardController extends Controller
             ],
             'jobs' => $user->assignedRepairRequests()->with('customer')->latest()->take(8)->get(),
         ]);
+    }
+
+    /**
+     * Paid invoice revenue for the last 6 months.
+     *
+     * @return array<int, array{label: string, amount: float}>
+     */
+    private function monthlyRevenue(): array
+    {
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $months[] = [
+                'label' => $month->format('M'),
+                'amount' => (float) Invoice::where('payment_status', Invoice::STATUS_PAID)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('total'),
+            ];
+        }
+
+        return $months;
     }
 
     /**
