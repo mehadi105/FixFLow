@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepairRequestController;
 use App\Http\Controllers\UserController;
@@ -129,6 +130,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/repair-requests/{repairRequest}/diagnosis', [RepairRequestController::class, 'updateDiagnosis'])
         ->middleware('role:admin,technician')
         ->name('repair-requests.diagnosis');
+
+    /*
+    | Chat (Module C3)
+    */
+    Route::get('/repair-requests/{repairRequest}/messages', [MessageController::class, 'index'])
+        ->name('repair-requests.messages.index');
+
+    Route::post('/repair-requests/{repairRequest}/messages', [MessageController::class, 'store'])
+        ->name('repair-requests.messages.store');
+
+    Route::post('/repair-requests/{repairRequest}/messages/read', [MessageController::class, 'markRead'])
+        ->name('repair-requests.messages.read');
 
     /*
     | Invoices (Module 4)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Message;
 use App\Models\RepairRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -109,9 +110,27 @@ class RepairRequestController extends Controller
 
         $repairRequest->load(['customer', 'technician', 'invoice', 'warranty']);
 
+        $canChat = $repairRequest->hasChatParticipant($user);
+        $messages = collect();
+
+        if ($canChat) {
+            $messages = $repairRequest->messages()
+                ->with('sender')
+                ->oldest()
+                ->get();
+
+            Message::query()
+                ->where('repair_request_id', $repairRequest->id)
+                ->where('user_id', '!=', $user->id)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        }
+
         return view('repair-requests.show', [
             'role' => $user->role,
             'repairRequest' => $repairRequest,
+            'canChat' => $canChat,
+            'messages' => $messages,
             // Technicians available for assignment (admins only need this list).
             'technicians' => $user->isAdmin()
                 ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
