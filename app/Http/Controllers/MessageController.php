@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageSent;
 use App\Models\Message;
 use App\Models\RepairRequest;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class MessageController extends Controller
             ->with('sender')
             ->oldest()
             ->get()
-            ->map(fn (Message $message) => $this->formatMessage($message, $request->user()->id));
+            ->map(fn (Message $message) => $message->toChatArray($request->user()->id));
 
         return response()->json(['messages' => $messages]);
     }
@@ -43,10 +44,13 @@ class MessageController extends Controller
         ]);
 
         $message->load('sender');
+        $payload = $message->toChatArray($request->user()->id);
+
+        broadcast(new MessageSent($payload, $repairRequest->id))->toOthers();
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => $this->formatMessage($message, $request->user()->id),
+                'message' => $payload,
             ], 201);
         }
 
@@ -66,27 +70,5 @@ class MessageController extends Controller
             ->update(['read_at' => now()]);
 
         return response()->json(['ok' => true]);
-    }
-
-    /**
-     * Shape a message for JSON responses and future realtime events.
-     *
-     * @return array<string, mixed>
-     */
-    private function formatMessage(Message $message, int $currentUserId): array
-    {
-        return [
-            'id' => $message->id,
-            'body' => $message->body,
-            'is_mine' => $message->user_id === $currentUserId,
-            'sender' => [
-                'id' => $message->sender->id,
-                'name' => $message->sender->name,
-                'role' => $message->sender->role,
-                'initials' => strtoupper(substr($message->sender->name, 0, 2)),
-            ],
-            'created_at' => $message->created_at->toIso8601String(),
-            'created_at_human' => $message->created_at->format('M d, Y g:i A'),
-        ];
     }
 }

@@ -280,4 +280,32 @@
   .ff-chat-input {
     @apply min-h-[4.5rem] resize-y;
   }
+
+  .ff-chat-status {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset;
+  }
+
+  .ff-chat-status[data-mode='live'] {
+    @apply bg-emerald-50 text-emerald-700 ring-emerald-500/20;
+  }
+
+  .ff-chat-status[data-mode='polling'] {
+    @apply bg-amber-50 text-amber-700 ring-amber-500/20;
+  }
+
+  .ff-chat-status[data-mode='connecting'] {
+    @apply bg-slate-100 text-slate-600 ring-slate-400/20;
+  }
+
+  .ff-chat-status[data-mode='error'] {
+    @apply bg-rose-50 text-rose-700 ring-rose-500/20;
+  }
+
+  .ff-unread-badge {
+    @apply inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white;
+  }
+
+  .ff-chat-typing {
+    @apply px-2 py-1 text-xs italic text-slate-500;
+  }
 }

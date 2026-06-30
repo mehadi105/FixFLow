@@ -67,11 +67,46 @@ php artisan storage:link
 # 5. Build front-end assets
 npm run build      # or: npm run dev (for live reload)
 
-# 6. Run the app
-php artisan serve
+# 6. Run the app (with live chat)
+composer run dev
+
+# Or run manually in separate terminals:
+# php artisan serve
+# php artisan reverb:start
+# npm run dev
 ```
 
 Then open http://127.0.0.1:8000.
+
+### Live chat demo (two windows)
+
+1. Start the app with Reverb running (`composer run dev` or `php artisan reverb:start` in a second terminal).
+2. Log in as `customer@fixflow.test` in a normal browser window.
+3. Log in as `technician@fixflow.test` in an incognito/private window.
+4. Both accounts have **pre-seeded conversations** on John's repair requests — look for the unread badge on **My Repair Requests** / **Assigned Jobs** in the sidebar.
+5. Open the **repairing** request (technician sees 1 unread) or **diagnosing** request (customer sees 1 unread) → scroll to the **Conversation** panel.
+6. Send a new message in one window; it should appear instantly in the other. Start typing to show the **typing indicator** (requires Reverb / Live status).
+
+If Reverb is not running, chat falls back to **polling** every few seconds (status badge shows "Polling"). Typing indicators only work in Live mode.
+
+### Showcase script (~3 minutes)
+
+Use this flow for a viva or demo recording:
+
+| Step | Account | Action |
+| ---- | ------- | ------ |
+| 1 | Admin `admin@fixflow.test` | Dashboard → Users → show role management |
+| 2 | Admin | Repair Requests → assign a technician to a pending job |
+| 3 | Customer `customer@fixflow.test` | Dashboard → note unread badge → open diagnosing repair → read technician message |
+| 4 | Technician `technician@fixflow.test` | Assigned Jobs → open repairing request → reply in Conversation |
+| 5 | Both (two windows) | Live chat: send messages + typing indicator with Reverb running |
+| 6 | Admin | Reports + Invoices (mark paid) → Warranty on completed job |
+
+Reset demo data anytime:
+
+```bash
+php artisan migrate:fresh --seed
+```
 
 ---
 
@@ -85,7 +120,7 @@ The seeder creates the following accounts (password for all: **`password`**):
 | Technician | `technician@fixflow.test`  |
 | Customer   | `customer@fixflow.test`    |
 
-The seeder also generates sample customers, repair requests across all statuses, invoices, and warranties spread over the last six months so dashboards and reports look populated.
+The seeder also generates sample customers, repair requests across all statuses, invoices, warranties, and **chat message threads** spread over the last six months so dashboards and reports look populated.
 
 To reset the database with fresh demo data:
 
