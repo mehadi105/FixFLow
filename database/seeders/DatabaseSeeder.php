@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Invoice;
+use App\Models\Message;
 use App\Models\RepairRequest;
 use App\Models\User;
 use App\Models\Warranty;
@@ -35,8 +36,11 @@ class DatabaseSeeder extends Seeder
             ['name' => 'John Customer', 'role' => User::ROLE_CUSTOMER, 'password' => Hash::make('password')]
         );
 
-        // Only generate sample records once.
         if (RepairRequest::count() > 0) {
+            if (Message::count() === 0) {
+                $this->seedDemoChat($john);
+            }
+
             return;
         }
 
@@ -66,10 +70,13 @@ class DatabaseSeeder extends Seeder
             for ($i = 0; $i < $count; $i++) {
                 $createdAt = Carbon::now()->subDays(rand(5, 175))->setTime(rand(8, 17), rand(0, 59));
                 $customer = $i === 0 ? $john : $customers->random();
+                $technician = $hasTech
+                    ? ($customer->id === $john->id ? $technicians->first() : $technicians->random())
+                    : null;
 
                 $repair = RepairRequest::factory()->create([
                     'user_id' => $customer->id,
-                    'technician_id' => $hasTech ? $technicians->random()->id : null,
+                    'technician_id' => $technician?->id,
                     'status' => $status,
                     'diagnosis_notes' => $hasDiagnosis ? fake()->randomElement($diagnosisSamples) : null,
                     'created_at' => $createdAt,
@@ -105,5 +112,71 @@ class DatabaseSeeder extends Seeder
                 }
             }
         }
+
+        $this->seedDemoChat($john);
+    }
+
+    /**
+     * Seed sample chat threads for the live demo (C8).
+     */
+    private function seedDemoChat(User $john): void
+    {
+        $repairing = RepairRequest::query()
+            ->where('user_id', $john->id)
+            ->where('status', RepairRequest::STATUS_REPAIRING)
+            ->whereNotNull('technician_id')
+            ->first();
+
+        $diagnosing = RepairRequest::query()
+            ->where('user_id', $john->id)
+            ->where('status', RepairRequest::STATUS_DIAGNOSING)
+            ->whereNotNull('technician_id')
+            ->first();
+
+        $completed = RepairRequest::query()
+            ->where('user_id', $john->id)
+            ->where('status', RepairRequest::STATUS_COMPLETED)
+            ->whereNotNull('technician_id')
+            ->first();
+
+        if ($repairing) {
+            $technician = $repairing->technician;
+            $base = Carbon::now()->subDays(2)->setTime(10, 15);
+            $this->seedMessage($repairing, $john, 'Hi '.$technician->name.', any update on my device?', $base, true);
+            $this->seedMessage($repairing, $technician, 'Yes — screen assembly is on order. Should arrive tomorrow.', $base->copy()->addMinutes(18), true);
+            $this->seedMessage($repairing, $john, 'Great, thanks! Will I get a message when repair starts?', $base->copy()->addMinutes(42), false);
+        }
+
+        if ($diagnosing) {
+            $technician = $diagnosing->technician;
+            $base = Carbon::now()->subDay()->setTime(14, 30);
+            $this->seedMessage($diagnosing, $john, 'Just checking in — have you started the diagnosis yet?', $base, true);
+            $this->seedMessage($diagnosing, $technician, 'Yes, battery health is at 58%. I recommend a replacement.', $base->copy()->addMinutes(25), true);
+            $this->seedMessage($diagnosing, $technician, 'I can start the swap this afternoon if you approve the quote.', $base->copy()->addMinutes(30), false);
+        }
+
+        if ($completed) {
+            $technician = $completed->technician;
+            $base = Carbon::now()->subDays(10)->setTime(9, 0);
+            $this->seedMessage($completed, $technician, 'Your device is ready for pickup!', $base, true);
+            $this->seedMessage($completed, $john, 'Thanks — invoice paid. Everything looks good.', $base->copy()->addHours(3), true);
+        }
+    }
+
+    private function seedMessage(
+        RepairRequest $repair,
+        User $sender,
+        string $body,
+        Carbon $at,
+        bool $read,
+    ): void {
+        Message::create([
+            'repair_request_id' => $repair->id,
+            'user_id' => $sender->id,
+            'body' => $body,
+            'read_at' => $read ? $at->copy()->addMinutes(5) : null,
+            'created_at' => $at,
+            'updated_at' => $at,
+        ]);
     }
 }

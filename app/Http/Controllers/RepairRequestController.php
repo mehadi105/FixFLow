@@ -44,9 +44,16 @@ class RepairRequestController extends Controller
             $query->where('status', $status);
         }
 
+        $requests = $query->paginate(10)->withQueryString();
+        $unreadCounts = Message::unreadCountsByRepairRequestForUser(
+            $user,
+            $requests->getCollection()->pluck('id')
+        );
+
         return view('repair-requests.index', [
             'role' => $user->role,
-            'requests' => $query->paginate(10)->withQueryString(),
+            'requests' => $requests,
+            'unreadCounts' => $unreadCounts,
             'search' => $search ?? '',
             'status' => $status ?? '',
         ]);

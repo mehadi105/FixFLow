@@ -36,7 +36,12 @@
                         <tbody>
                             @forelse ($jobs as $job)
                                 <tr>
-                                    <td class="cell-id">{{ $job->reference }}</td>
+                                    <td class="cell-id">
+                                        <span class="inline-flex items-center gap-2">
+                                            {{ $job->reference }}
+                                            <x-unread-badge :count="$unreadCounts[$job->id] ?? 0" />
+                                        </span>
+                                    </td>
                                     <td class="cell-strong">{{ $job->customer->name }}</td>
                                     <td class="cell-muted">{{ $job->device_label }}</td>
                                     <td class="cell-truncate">{{ $job->issue_description }}</td>
