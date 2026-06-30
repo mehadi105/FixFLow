@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Models\Message;
 use App\Models\RepairRequest;
 use App\Models\User;
 use App\Models\Warranty;
@@ -27,6 +28,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $requests = $user->repairRequests();
+        $recentRequests = $user->repairRequests()->latest()->take(5)->get();
 
         return view('dashboard.customer', [
             'role' => User::ROLE_CUSTOMER,
@@ -36,7 +38,11 @@ class DashboardController extends Controller
                 'completed' => (clone $requests)->where('status', RepairRequest::STATUS_COMPLETED)->count(),
                 'activeWarranty' => Warranty::where('user_id', $user->id)->whereDate('end_date', '>=', now())->count(),
             ],
-            'recentRequests' => $user->repairRequests()->latest()->take(5)->get(),
+            'recentRequests' => $recentRequests,
+            'unreadCounts' => Message::unreadCountsByRepairRequestForUser(
+                $user,
+                $recentRequests->pluck('id')
+            ),
         ]);
     }
 
@@ -68,6 +74,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $assigned = $user->assignedRepairRequests();
+        $jobs = $user->assignedRepairRequests()->with('customer')->latest()->take(8)->get();
 
         return view('dashboard.technician', [
             'role' => User::ROLE_TECHNICIAN,
@@ -79,7 +86,11 @@ class DashboardController extends Controller
                 ])->count(),
                 'completed' => (clone $assigned)->where('status', RepairRequest::STATUS_COMPLETED)->count(),
             ],
-            'jobs' => $user->assignedRepairRequests()->with('customer')->latest()->take(8)->get(),
+            'jobs' => $jobs,
+            'unreadCounts' => Message::unreadCountsByRepairRequestForUser(
+                $user,
+                $jobs->pluck('id')
+            ),
         ]);
     }
 

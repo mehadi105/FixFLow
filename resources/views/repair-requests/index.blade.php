@@ -45,7 +45,12 @@
                 <tbody>
                     @forelse ($requests as $request)
                         <tr>
-                            <td class="cell-id">{{ $request->reference }}</td>
+                            <td class="cell-id">
+                                <span class="inline-flex items-center gap-2">
+                                    {{ $request->reference }}
+                                    <x-unread-badge :count="$unreadCounts[$request->id] ?? 0" />
+                                </span>
+                            </td>
                             <td class="cell-muted">{{ $request->device_type }}</td>
                             <td class="cell-strong">{{ $request->device_label }}</td>
                             <td class="cell-truncate">{{ $request->issue_description }}</td>
