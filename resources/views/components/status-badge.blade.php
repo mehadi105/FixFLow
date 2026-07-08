@@ -3,6 +3,8 @@
 @php
     $styles = match(strtolower($status)) {
         'pending' => 'bg-amber-50 text-amber-800 ring-amber-500/20',
+        'approved' => 'bg-emerald-50 text-emerald-800 ring-emerald-500/20',
+        'rejected' => 'bg-rose-50 text-rose-800 ring-rose-500/20',
         'assigned' => 'bg-sky-50 text-sky-800 ring-sky-500/20',
         'diagnosing' => 'bg-violet-50 text-violet-800 ring-violet-500/20',
         'repairing', 'in progress' => 'bg-indigo-50 text-indigo-800 ring-indigo-500/20',

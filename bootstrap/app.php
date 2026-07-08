@@ -13,8 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureApprovedTechnician::class,
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'approved.technician' => \App\Http\Middleware\EnsureApprovedTechnician::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

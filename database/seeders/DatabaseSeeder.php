@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Invoice;
 use App\Models\Message;
 use App\Models\RepairRequest;
+use App\Models\TechnicianApplication;
 use App\Models\User;
 use App\Models\Warranty;
 use Illuminate\Database\Seeder;
@@ -31,6 +32,8 @@ class DatabaseSeeder extends Seeder
             );
         });
 
+        $this->seedApprovedTechnicianApplications($technicians, $admin);
+
         $john = User::updateOrCreate(
             ['email' => 'customer@fixflow.test'],
             ['name' => 'John Customer', 'role' => User::ROLE_CUSTOMER, 'password' => Hash::make('password')]
@@ -40,6 +43,9 @@ class DatabaseSeeder extends Seeder
             if (Message::count() === 0) {
                 $this->seedDemoChat($john);
             }
+
+            $this->seedApprovedTechnicianApplications($technicians, $admin);
+            $this->seedPendingTechnicianApplication();
 
             return;
         }
@@ -114,6 +120,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->seedDemoChat($john);
+        $this->seedPendingTechnicianApplication();
     }
 
     /**
@@ -178,5 +185,53 @@ class DatabaseSeeder extends Seeder
             'created_at' => $at,
             'updated_at' => $at,
         ]);
+    }
+
+    /**
+     * Demo technicians are pre-approved so assignment and chat work out of the box.
+     */
+    private function seedApprovedTechnicianApplications($technicians, User $admin): void
+    {
+        foreach ($technicians as $technician) {
+            TechnicianApplication::updateOrCreate(
+                ['user_id' => $technician->id],
+                [
+                    'phone' => '+1 555 010'.str_pad((string) $technician->id, 2, '0', STR_PAD_LEFT),
+                    'years_experience' => 3,
+                    'specialties' => 'Smartphones, laptops, tablets',
+                    'certification' => 'CompTIA A+',
+                    'motivation' => 'Experienced repair specialist ready to help FixFlow customers.',
+                    'status' => TechnicianApplication::STATUS_APPROVED,
+                    'reviewed_by' => $admin->id,
+                    'reviewed_at' => now()->subMonths(2),
+                ]
+            );
+        }
+    }
+
+    /**
+     * One pending applicant so admins can demo the approval flow.
+     */
+    private function seedPendingTechnicianApplication(): void
+    {
+        $applicant = User::updateOrCreate(
+            ['email' => 'applicant@fixflow.test'],
+            ['name' => 'Alex Applicant', 'role' => User::ROLE_TECHNICIAN, 'password' => Hash::make('password')]
+        );
+
+        TechnicianApplication::updateOrCreate(
+            ['user_id' => $applicant->id],
+            [
+                'phone' => '+880 1711 000999',
+                'years_experience' => 2,
+                'specialties' => 'Android phones, tablet screens',
+                'certification' => 'Mobile repair workshop',
+                'motivation' => 'I have two years of hands-on repair shop experience and want to join FixFlow as a certified technician.',
+                'status' => TechnicianApplication::STATUS_PENDING,
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+                'admin_notes' => null,
+            ]
+        );
     }
 }
