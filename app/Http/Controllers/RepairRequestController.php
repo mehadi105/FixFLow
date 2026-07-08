@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RepairRequestController extends Controller
@@ -74,6 +75,8 @@ class RepairRequestController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->assertDeviceImageUploaded($request);
+
         $validated = $request->validate([
             'device_type' => ['required', 'string', 'max:255'],
             'brand' => ['nullable', 'string', 'max:255'],
@@ -81,15 +84,14 @@ class RepairRequestController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'issue_description' => ['required', 'string', 'max:2000'],
             'priority' => ['required', 'in:low,medium,high'],
-            'device_image' => ['nullable', 'image', 'max:5120'],
+            'device_image' => ['nullable', 'file', 'image', 'max:2048'],
         ]);
+
+        unset($validated['device_image']);
 
         $validated['user_id'] = $request->user()->id;
         $validated['status'] = RepairRequest::STATUS_PENDING;
-
-        if ($request->hasFile('device_image')) {
-            $validated['image_path'] = $request->file('device_image')->store('devices', 'public');
-        }
+        $validated['image_path'] = $request->file('device_image')?->store('devices', 'public');
 
         $repairRequest = RepairRequest::create($validated);
         $repairRequest->update(['reference' => 'RR-'.(1000 + $repairRequest->id)]);
@@ -97,6 +99,30 @@ class RepairRequestController extends Controller
         return redirect()
             ->route('repair-requests.show', $repairRequest)
             ->with('status', 'Repair request submitted successfully.');
+    }
+
+    /**
+     * Surface PHP upload failures that Laravel would otherwise skip silently.
+     */
+    private function assertDeviceImageUploaded(Request $request): void
+    {
+        $upload = $_FILES['device_image'] ?? null;
+
+        if (! is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return;
+        }
+
+        $message = match ($upload['error']) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The device image is too large. Please upload a file under 2 MB.',
+            UPLOAD_ERR_PARTIAL => 'The device image only partially uploaded. Please try again.',
+            default => 'The device image failed to upload. Please try again.',
+        };
+
+        if ($upload['error'] !== UPLOAD_ERR_OK) {
+            throw ValidationException::withMessages([
+                'device_image' => $message,
+            ]);
+        }
     }
 
     /**

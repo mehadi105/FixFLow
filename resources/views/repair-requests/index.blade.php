@@ -11,23 +11,38 @@
     </x-page-header>
 
     <x-dashboard-card>
-        <form method="GET" action="{{ route('repair-requests.index') }}" class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+        <form
+            method="GET"
+            action="{{ route('repair-requests.index') }}"
+            class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center"
+            data-live-filter-form
+            data-live-filter-target="#repair-requests-results"
+        >
             <div class="ff-field flex-1">
                 <label for="search" class="sr-only">Search</label>
-                <input type="search" id="search" name="search" value="{{ $search }}" placeholder="Search by reference, device, or issue..." class="ff-input">
+                <input
+                    type="search"
+                    id="search"
+                    name="search"
+                    value="{{ $search }}"
+                    placeholder="Search by reference, device, or issue..."
+                    class="ff-input"
+                    data-live-filter-input
+                    autocomplete="off"
+                >
             </div>
             <div class="ff-field sm:w-48">
                 <label for="status" class="sr-only">Filter by status</label>
-                <select id="status" name="status" class="ff-input" onchange="this.form.submit()">
+                <select id="status" name="status" class="ff-input" data-live-filter-input>
                     <option value="">All Statuses</option>
                     @foreach (\App\Models\RepairRequest::STATUSES as $statusOption)
                         <option value="{{ $statusOption }}" @selected($status === $statusOption)>{{ ucfirst($statusOption) }}</option>
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="ff-btn-secondary">Search</button>
         </form>
 
+        <div id="repair-requests-results" class="transition-opacity duration-150 data-[loading=true]:pointer-events-none data-[loading=true]:opacity-50">
         <div class="ff-table-wrap">
             <table class="ff-table min-w-full">
                 <thead>
@@ -76,9 +91,10 @@
         </div>
 
         @if ($requests->hasPages())
-            <div class="mt-6">
+            <div class="mt-6" data-live-filter-pagination>
                 {{ $requests->links() }}
             </div>
         @endif
+        </div>
     </x-dashboard-card>
 </x-app-layout>
