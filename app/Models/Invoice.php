@@ -22,6 +22,10 @@ class Invoice extends Model
         'discount',
         'total',
         'payment_status',
+        'payment_method',
+        'stripe_checkout_session_id',
+        'stripe_payment_intent_id',
+        'paid_at',
     ];
 
     protected function casts(): array
@@ -31,6 +35,7 @@ class Invoice extends Model
             'parts_cost' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
+            'paid_at' => 'datetime',
         ];
     }
 

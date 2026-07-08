@@ -1,6 +1,14 @@
 <x-app-layout :role="$role ?? 'customer'">
     <x-page-header title="Invoice {{ $invoice->invoice_number }}" description="Issued on {{ $invoice->created_at->format('M d, Y') }}">
         <x-slot name="actions">
+            @if (auth()->user()->isCustomer() && ! $invoice->isPaid() && ($stripeEnabled ?? false))
+                <form method="POST" action="{{ route('invoices.pay', $invoice) }}" class="print:hidden">
+                    @csrf
+                    <button type="submit" class="ff-btn-primary">
+                        Pay with Stripe
+                    </button>
+                </form>
+            @endif
             @if (auth()->user()->isAdmin())
                 <form method="POST" action="{{ route('invoices.mark-paid', $invoice) }}" class="print:hidden">
                     @csrf
@@ -23,6 +31,12 @@
         </div>
     @endif
 
+    @if ($errors->has('payment'))
+        <div class="mb-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200 print:hidden">
+            {{ $errors->first('payment') }}
+        </div>
+    @endif
+
     <div class="mx-auto max-w-3xl">
         <div class="ff-card-flat p-6 sm:p-8 print:shadow-none print:ring-0">
             <div class="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
@@ -35,6 +49,14 @@
                     <p class="text-lg font-semibold text-slate-900">INVOICE</p>
                     <p class="mt-1 text-sm text-slate-600">{{ $invoice->invoice_number }}</p>
                     <div class="mt-2"><x-status-badge :status="$invoice->payment_status" /></div>
+                    @if ($invoice->isPaid() && $invoice->payment_method)
+                        <p class="mt-2 text-xs text-slate-500">
+                            Paid via {{ $invoice->payment_method === 'stripe' ? 'Stripe (online)' : 'service center (manual)' }}
+                            @if ($invoice->paid_at)
+                                · {{ $invoice->paid_at->format('M d, Y g:i A') }}
+                            @endif
+                        </p>
+                    @endif
                 </div>
             </div>
 

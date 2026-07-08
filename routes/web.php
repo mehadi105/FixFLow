@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoicePaymentController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepairRequestController;
@@ -79,6 +80,9 @@ Route::post('/logout', function (Request $request) {
 
     return redirect()->route('home');
 })->middleware('auth')->name('logout');
+
+Route::post('/stripe/webhook', [InvoicePaymentController::class, 'webhook'])
+    ->name('stripe.webhook');
 
 /*
 |--------------------------------------------------------------------------
@@ -163,6 +167,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])
         ->middleware('role:admin')
         ->name('invoices.mark-paid');
+
+    Route::post('/invoices/{invoice}/pay', [InvoicePaymentController::class, 'checkout'])
+        ->middleware('role:customer')
+        ->name('invoices.pay');
+
+    Route::get('/invoices/{invoice}/payment/success', [InvoicePaymentController::class, 'success'])
+        ->middleware('role:customer')
+        ->name('invoices.payment.success');
+
+    Route::get('/invoices/{invoice}/payment/cancel', [InvoicePaymentController::class, 'cancel'])
+        ->middleware('role:customer')
+        ->name('invoices.payment.cancel');
 
     /*
     | Warranties (Module 5)

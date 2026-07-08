@@ -95,6 +95,7 @@ class InvoiceController extends Controller
         return view('invoices.show', [
             'role' => $user->role,
             'invoice' => $invoice,
+            'stripeEnabled' => \App\Services\StripePaymentService::isConfigured(),
         ]);
     }
 
@@ -103,9 +104,19 @@ class InvoiceController extends Controller
      */
     public function markPaid(Request $request, Invoice $invoice): RedirectResponse
     {
-        $invoice->update([
-            'payment_status' => $invoice->isPaid() ? Invoice::STATUS_UNPAID : Invoice::STATUS_PAID,
-        ]);
+        if ($invoice->isPaid()) {
+            $invoice->update([
+                'payment_status' => Invoice::STATUS_UNPAID,
+                'payment_method' => null,
+                'paid_at' => null,
+            ]);
+        } else {
+            $invoice->update([
+                'payment_status' => Invoice::STATUS_PAID,
+                'payment_method' => 'manual',
+                'paid_at' => now(),
+            ]);
+        }
 
         return back()->with('status', 'Payment status updated.');
     }
