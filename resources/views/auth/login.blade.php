@@ -19,10 +19,7 @@
             <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="username" class="ff-input">
         </div>
 
-        <div class="ff-field">
-            <label for="password" class="ff-label">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password" class="ff-input">
-        </div>
+        <x-password-input id="password" name="password" label="Password" autocomplete="current-password" />
 
         <div class="flex items-center">
             <label class="flex items-center gap-2">
