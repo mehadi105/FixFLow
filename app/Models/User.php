@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -59,6 +60,33 @@ class User extends Authenticatable
         return $this->hasMany(Message::class);
     }
 
+    /**
+     * Technician job application (technicians only).
+     */
+    public function technicianApplication(): HasOne
+    {
+        return $this->hasOne(TechnicianApplication::class);
+    }
+
+    /**
+     * Technicians approved by admin and available for assignment.
+     */
+    public static function approvedTechnicians()
+    {
+        return static::query()
+            ->where('role', self::ROLE_TECHNICIAN)
+            ->whereHas('technicianApplication', fn ($q) => $q->where('status', TechnicianApplication::STATUS_APPROVED));
+    }
+
+    public function isApprovedTechnician(): bool
+    {
+        if (! $this->isTechnician()) {
+            return false;
+        }
+
+        return $this->technicianApplication?->isApproved() ?? false;
+    }
+
     public function isCustomer(): bool
     {
         return $this->role === self::ROLE_CUSTOMER;
@@ -79,6 +107,10 @@ class User extends Authenticatable
      */
     public function dashboardRoute(): string
     {
+        if ($this->isTechnician() && ! $this->isApprovedTechnician()) {
+            return 'technician.application.status';
+        }
+
         return match ($this->role) {
             self::ROLE_ADMIN => 'dashboard.admin',
             self::ROLE_TECHNICIAN => 'dashboard.technician',

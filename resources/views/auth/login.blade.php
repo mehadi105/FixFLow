@@ -2,7 +2,9 @@
     <h2 class="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h2>
     <p class="mt-2 text-sm text-slate-500">
         New to FixFlow?
-        <a href="{{ route('register') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">Create an account</a>
+        <a href="{{ route('register') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">Create a customer account</a>
+        or
+        <a href="{{ route('technician.apply') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">apply as a technician</a>
     </p>
 
     <form class="mt-8 space-y-5" action="{{ route('login') }}" method="POST">

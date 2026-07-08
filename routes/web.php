@@ -6,6 +6,7 @@ use App\Http\Controllers\InvoicePaymentController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepairRequestController;
+use App\Http\Controllers\TechnicianApplicationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WarrantyController;
 use App\Models\User;
@@ -51,18 +52,23 @@ Route::middleware('guest')->group(function () {
         return view('auth.register');
     })->name('register');
 
+    Route::get('/technician/apply', [TechnicianApplicationController::class, 'create'])
+        ->name('technician.apply');
+
+    Route::post('/technician/apply', [TechnicianApplicationController::class, 'store'])
+        ->name('technician.apply.store');
+
     Route::post('/register', function (Request $request) {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'role' => ['required', 'in:customer,technician'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
+            'role' => User::ROLE_CUSTOMER,
             'password' => Hash::make($validated['password']),
         ]);
 
@@ -93,6 +99,15 @@ Route::post('/stripe/webhook', [InvoicePaymentController::class, 'webhook'])
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'redirect']);
 
+    Route::get('/technician/application', [TechnicianApplicationController::class, 'status'])
+        ->middleware('role:technician')
+        ->name('technician.application.status');
+
+    Route::middleware(['role:technician', 'approved.technician'])->group(function () {
+        Route::get('/dashboard/technician', [DashboardController::class, 'technician'])
+            ->name('dashboard.technician');
+    });
+
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])
         ->middleware('role:customer')
         ->name('dashboard.customer');
@@ -101,9 +116,19 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:admin')
         ->name('dashboard.admin');
 
-    Route::get('/dashboard/technician', [DashboardController::class, 'technician'])
-        ->middleware('role:technician')
-        ->name('dashboard.technician');
+    /*
+    | Technician applications (admin review)
+    */
+    Route::middleware('role:admin')->prefix('technician-applications')->group(function () {
+        Route::get('/', [TechnicianApplicationController::class, 'index'])
+            ->name('technician-applications.index');
+        Route::get('/{technicianApplication}', [TechnicianApplicationController::class, 'show'])
+            ->name('technician-applications.show');
+        Route::post('/{technicianApplication}/approve', [TechnicianApplicationController::class, 'approve'])
+            ->name('technician-applications.approve');
+        Route::post('/{technicianApplication}/reject', [TechnicianApplicationController::class, 'reject'])
+            ->name('technician-applications.reject');
+    });
 
     /*
     | Repair Requests (Module 2)
@@ -128,11 +153,11 @@ Route::middleware('auth')->group(function () {
         ->name('repair-requests.assign');
 
     Route::post('/repair-requests/{repairRequest}/status', [RepairRequestController::class, 'updateStatus'])
-        ->middleware('role:admin,technician')
+        ->middleware('role:admin,technician', 'approved.technician')
         ->name('repair-requests.status');
 
     Route::post('/repair-requests/{repairRequest}/diagnosis', [RepairRequestController::class, 'updateDiagnosis'])
-        ->middleware('role:admin,technician')
+        ->middleware('role:admin,technician', 'approved.technician')
         ->name('repair-requests.diagnosis');
 
     /*

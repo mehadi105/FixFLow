@@ -166,7 +166,7 @@ class RepairRequestController extends Controller
             'messages' => $messages,
             // Technicians available for assignment (admins only need this list).
             'technicians' => $user->isAdmin()
-                ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
+                ? User::approvedTechnicians()->orderBy('name')->get()
                 : collect(),
         ]);
     }
@@ -177,13 +177,18 @@ class RepairRequestController extends Controller
     public function assignTechnician(Request $request, RepairRequest $repairRequest): RedirectResponse
     {
         $validated = $request->validate([
-            'technician_id' => [
-                'required',
-                Rule::exists('users', 'id')->where('role', User::ROLE_TECHNICIAN),
-            ],
+            'technician_id' => ['required', 'exists:users,id'],
         ]);
 
-        $repairRequest->technician_id = $validated['technician_id'];
+        $technician = User::approvedTechnicians()->find($validated['technician_id']);
+
+        if (! $technician) {
+            return back()->withErrors([
+                'technician_id' => 'Select an approved technician.',
+            ]);
+        }
+
+        $repairRequest->technician_id = $technician->id;
 
         // Move a brand-new request forward once it has an owner.
         if ($repairRequest->status === RepairRequest::STATUS_PENDING) {
@@ -238,7 +243,7 @@ class RepairRequestController extends Controller
             return;
         }
 
-        if ($user->isTechnician() && $repairRequest->technician_id === $user->id) {
+        if ($user->isTechnician() && $repairRequest->technician_id === $user->id && $user->isApprovedTechnician()) {
             return;
         }
 

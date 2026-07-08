@@ -3,6 +3,8 @@
     <p class="mt-2 text-sm text-slate-500">
         Already have an account?
         <a href="{{ route('login') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">Sign in</a>
+        · Want to repair devices?
+        <a href="{{ route('technician.apply') }}" class="font-semibold text-indigo-600 hover:text-indigo-500">Apply as a technician</a>
     </p>
 
     <form class="mt-8 space-y-5" action="{{ route('register') }}" method="POST">
@@ -26,14 +28,6 @@
         <div class="ff-field">
             <label for="email" class="ff-label">Email address</label>
             <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="username" class="ff-input">
-        </div>
-
-        <div class="ff-field">
-            <label for="role" class="ff-label">I am a</label>
-            <select id="role" name="role" required class="ff-input">
-                <option value="customer" @selected(old('role', 'customer') === 'customer')>Customer — I want to get a device repaired</option>
-                <option value="technician" @selected(old('role') === 'technician')>Technician — I repair devices</option>
-            </select>
         </div>
 
         <div class="ff-field">

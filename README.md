@@ -162,6 +162,7 @@ The seeder creates the following accounts (password for all: **`password`**):
 | ---------- | -------------------------- |
 | Admin      | `admin@fixflow.test`       |
 | Technician | `technician@fixflow.test`  |
+| Pending applicant | `applicant@fixflow.test` (awaiting admin approval) |
 | Customer   | `customer@fixflow.test`    |
 
 The seeder also generates sample customers, repair requests across all statuses, invoices, warranties, and **chat message threads** spread over the last six months so dashboards and reports look populated.

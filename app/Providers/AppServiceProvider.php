@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Message;
+use App\Models\TechnicianApplication;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,6 +28,13 @@ class AppServiceProvider extends ServiceProvider
             $view->with(
                 'unreadChatCount',
                 $user ? Message::unreadCountForUser($user) : 0
+            );
+
+            $view->with(
+                'pendingTechnicianApplications',
+                $user?->isAdmin()
+                    ? TechnicianApplication::where('status', TechnicianApplication::STATUS_PENDING)->count()
+                    : 0
             );
         });
     }
