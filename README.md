@@ -23,6 +23,7 @@ Built as a university final project with **Laravel**, **Blade**, and **Tailwind 
 - System-wide dashboard (customers, technicians, repairs, revenue)
 - Manage all repair requests and assign technicians
 - Create invoices (service charge, parts, discount, auto total) and mark them paid/unpaid
+- **Stripe Checkout (test mode)** — customers can pay invoices online
 - Issue warranties with selectable coverage duration
 - Manage users and change roles
 - Business reports: revenue, repairs by status, monthly trend, technician performance
@@ -107,6 +108,49 @@ Reset demo data anytime:
 ```bash
 php artisan migrate:fresh --seed
 ```
+
+---
+
+## Stripe payments (test mode)
+
+Customers can pay unpaid invoices in-app via **Stripe Checkout**. Admins can still mark invoices paid manually for cash at the service center.
+
+### 1. Create a Stripe test account
+
+1. Sign up at [https://dashboard.stripe.com/register](https://dashboard.stripe.com/register)
+2. Stay in **Test mode** (toggle in the Stripe Dashboard)
+
+### 2. Add keys to `.env`
+
+```env
+STRIPE_KEY=pk_test_...
+STRIPE_SECRET=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_CURRENCY=usd
+```
+
+Get **Publishable key** and **Secret key** from Stripe → Developers → API keys.
+
+### 3. Webhook (local development)
+
+For automatic paid status via webhook, forward events to your app:
+
+```bash
+stripe listen --forward-to http://127.0.0.1:8000/stripe/webhook
+```
+
+Copy the `whsec_...` signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+The success return URL also marks the invoice paid if the webhook is not running.
+
+### 4. Test payment flow
+
+1. Log in as **admin** → create an invoice (or use a seeded unpaid one)
+2. Log in as **customer** → **Invoices** → open invoice → **Pay with Stripe**
+3. Use test card: `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP
+4. After payment, invoice shows **paid** with method **Stripe (online)**
+
+More test cards: [Stripe testing docs](https://docs.stripe.com/testing)
 
 ---
 
