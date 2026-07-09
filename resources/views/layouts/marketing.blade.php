@@ -8,7 +8,7 @@
     <title>{{ $title ?? 'FixFlow' }} — Electronic Device Repair Management</title>
 
     @fonts
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/landing.js'])
 </head>
 <body class="ff-mesh font-sans text-slate-900 antialiased">
     <header class="sticky top-0 z-50 ff-glass">
@@ -26,15 +26,15 @@
             </a>
 
             <div class="hidden items-center gap-1 md:flex">
-                <a href="{{ url('/#about') }}" class="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-white/60 hover:text-indigo-600">About</a>
-                <a href="{{ url('/#services') }}" class="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-white/60 hover:text-indigo-600">Services</a>
-                <a href="{{ url('/#how-it-works') }}" class="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-white/60 hover:text-indigo-600">How It Works</a>
-                <a href="{{ url('/#contact') }}" class="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-white/60 hover:text-indigo-600">Contact</a>
+                <a href="{{ url('/#about') }}" class="ff-marketing-nav-link" data-nav-section="about">About</a>
+                <a href="{{ url('/#services') }}" class="ff-marketing-nav-link" data-nav-section="services">Services</a>
+                <a href="{{ url('/#how-it-works') }}" class="ff-marketing-nav-link" data-nav-section="how-it-works">How It Works</a>
+                <a href="{{ url('/#contact') }}" class="ff-marketing-nav-link" data-nav-section="contact">Contact</a>
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ route('login') }}" class="ff-btn-ghost hidden sm:inline-flex">Log in</a>
-                <a href="{{ route('register') }}" class="ff-btn-primary !px-4 !py-2">Sign up</a>
+                <a href="{{ route('login') }}" class="ff-btn-ghost ff-marketing-btn-login hidden sm:inline-flex">Log in</a>
+                <a href="{{ route('register') }}" class="ff-btn-primary ff-marketing-btn-signup !px-4 !py-2">Sign up</a>
             </div>
         </nav>
     </header>
