@@ -45,6 +45,9 @@ class RepairChat {
         this.sendBtn = root.querySelector('#chat-send-btn');
         this.statusEl = root.querySelector('#chat-status');
         this.typingEl = root.querySelector('#chat-typing');
+        this.typingTextEl = root.querySelector('.ff-chat-typing-text');
+
+        this.isInbox = root.classList.contains('ff-chat--inbox');
 
         this.knownMessageIds = new Set(
             [...this.container.querySelectorAll('[data-message-id]')].map((el) => Number(el.dataset.messageId))
@@ -63,9 +66,30 @@ class RepairChat {
         this.setupForm();
         this.setupInputToggle();
         this.setupTyping();
+        this.setupKeyboard();
         this.scrollToBottom();
         this.markRead();
         this.connectRealtime();
+    }
+
+    setupKeyboard() {
+        if (!this.input) {
+            return;
+        }
+
+        this.input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && ! event.shiftKey) {
+                event.preventDefault();
+                if (! this.sendBtn?.disabled) {
+                    this.form?.requestSubmit();
+                }
+            }
+        });
+
+        this.input.addEventListener('input', () => {
+            this.input.style.height = 'auto';
+            this.input.style.height = `${Math.min(this.input.scrollHeight, 128)}px`;
+        });
     }
 
     setupForm() {
@@ -102,6 +126,7 @@ class RepairChat {
                 const data = await response.json();
                 this.appendMessage(data.message);
                 this.input.value = '';
+                this.input.style.height = 'auto';
                 this.setupInputToggle();
             } catch (error) {
                 console.error(error);
@@ -174,14 +199,18 @@ class RepairChat {
             return;
         }
 
-        this.typingEl.textContent = `${name} is typing…`;
+        if (this.typingTextEl) {
+            this.typingTextEl.textContent = `${name} is typing`;
+        } else {
+            this.typingEl.textContent = `${name} is typing…`;
+        }
+
         this.typingEl.classList.remove('hidden');
         this.scrollToBottom();
 
         clearTimeout(this.typingTimeout);
         this.typingTimeout = window.setTimeout(() => {
-            this.typingEl.classList.add('hidden');
-            this.typingEl.textContent = '';
+            this.hideTyping();
         }, TYPING_HIDE_MS);
     }
 
@@ -192,7 +221,9 @@ class RepairChat {
 
         clearTimeout(this.typingTimeout);
         this.typingEl.classList.add('hidden');
-        this.typingEl.textContent = '';
+        if (this.typingTextEl) {
+            this.typingTextEl.textContent = '';
+        }
     }
 
     async connectRealtime() {
@@ -254,6 +285,18 @@ class RepairChat {
         }
     }
 
+    statusLabel(text) {
+        const labels = {
+            'Connecting…': 'Connecting',
+            'Live': 'Live',
+            'Polling (fallback)': 'Syncing',
+            'Reconnecting…': 'Reconnecting',
+            'Unable to send message. Try again.': 'Error',
+        };
+
+        return labels[text] ?? text;
+    }
+
     startPolling() {
         if (this.pollTimer) {
             return;
@@ -308,22 +351,38 @@ class RepairChat {
         wrap.dataset.messageId = String(message.id);
 
         const badgeClass = roleBadgeClass(message.sender?.role);
+        const timeLabel = message.created_at
+            ? new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            : (message.created_at_human ?? '');
 
-        wrap.innerHTML = `
-            <div class="ff-chat-bubble ${isMine ? 'ff-chat-bubble--mine' : 'ff-chat-bubble--theirs'}">
-                ${isMine ? '' : `
-                    <div class="ff-chat-meta">
-                        <span class="ff-chat-avatar">${escapeHtml(message.sender?.initials ?? '')}</span>
-                        <span class="ff-chat-sender">${escapeHtml(message.sender?.name ?? 'User')}</span>
-                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ${badgeClass}">
-                            ${escapeHtml(message.sender?.role ?? '')}
-                        </span>
+        if (this.isInbox) {
+            wrap.innerHTML = `
+                ${isMine ? '' : `<span class="ff-chat-avatar ff-chat-avatar--inbox">${escapeHtml(message.sender?.initials ?? '')}</span>`}
+                <div class="ff-chat-bubble-col">
+                    ${isMine ? '' : `<p class="ff-chat-sender-label">${escapeHtml(message.sender?.name ?? 'User')}</p>`}
+                    <div class="ff-chat-bubble ${isMine ? 'ff-chat-bubble--mine' : 'ff-chat-bubble--theirs'} ff-chat-bubble--inbox">
+                        <p class="ff-chat-body">${escapeHtml(message.body)}</p>
                     </div>
-                `}
-                <p class="ff-chat-body">${escapeHtml(message.body)}</p>
-                <p class="ff-chat-time">${escapeHtml(message.created_at_human ?? '')}</p>
-            </div>
-        `;
+                    <p class="ff-chat-time ${isMine ? 'ff-chat-time--mine' : 'ff-chat-time--theirs'}">${escapeHtml(timeLabel)}</p>
+                </div>
+            `;
+        } else {
+            wrap.innerHTML = `
+                <div class="ff-chat-bubble ${isMine ? 'ff-chat-bubble--mine' : 'ff-chat-bubble--theirs'}">
+                    ${isMine ? '' : `
+                        <div class="ff-chat-meta">
+                            <span class="ff-chat-avatar">${escapeHtml(message.sender?.initials ?? '')}</span>
+                            <span class="ff-chat-sender">${escapeHtml(message.sender?.name ?? 'User')}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ${badgeClass}">
+                                ${escapeHtml(message.sender?.role ?? '')}
+                            </span>
+                        </div>
+                    `}
+                    <p class="ff-chat-body">${escapeHtml(message.body)}</p>
+                    <p class="ff-chat-time">${escapeHtml(message.created_at_human ?? '')}</p>
+                </div>
+            `;
+        }
 
         this.container.appendChild(wrap);
         this.scrollToBottom();
@@ -331,6 +390,8 @@ class RepairChat {
         if (!isMine) {
             this.markRead();
         }
+
+        window.refreshChatUnreadBadges?.();
     }
 
     async markRead() {
@@ -343,6 +404,8 @@ class RepairChat {
                     'X-Requested-With': 'XMLHttpRequest',
                 },
             });
+
+            window.refreshChatUnreadBadges?.();
         } catch (error) {
             console.error(error);
         }
@@ -357,7 +420,12 @@ class RepairChat {
     setStatus(text, mode) {
         this.mode = mode;
         if (this.statusEl) {
-            this.statusEl.textContent = text;
+            const label = this.statusEl.querySelector('.ff-chat-status-label');
+            if (label) {
+                label.textContent = this.statusLabel(text);
+            } else {
+                this.statusEl.textContent = text;
+            }
             this.statusEl.dataset.mode = mode;
         }
     }

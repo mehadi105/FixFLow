@@ -11,7 +11,8 @@
       <p class="text-xs text-slate-500">Management Dashboard</p>
     </div>
 
-    <div class="flex items-center gap-x-3">
+    <div class="flex items-center gap-x-2 sm:gap-x-3">
+      <x-messages-shortcut :unread-count="$unreadChatCount ?? 0" />
       <x-notification-panel :notification-total="$notificationTotal ?? 0" />
 
       <details class="relative">
