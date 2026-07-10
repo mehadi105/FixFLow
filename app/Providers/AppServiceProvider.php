@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer(['layouts.partials.sidebar-nav', 'layouts.partials.top-navbar'], function ($view) {
+        View::composer(['layouts.partials.sidebar-nav', 'layouts.partials.top-navbar', 'messages.index', 'layouts.app'], function ($view) {
             $user = auth()->user();
 
             $unreadChatCount = $user ? Message::unreadCountForUser($user) : 0;

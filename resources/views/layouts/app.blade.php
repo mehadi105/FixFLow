@@ -11,7 +11,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
-<body class="ff-mesh font-sans antialiased">
+<body class="ff-mesh font-sans antialiased" data-chat-unread-url="{{ auth()->check() ? route('messages.unread-count') : '' }}">
     <div class="min-h-screen lg:flex">
         <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-slate-900/60 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
 
@@ -55,6 +55,25 @@
             </main>
         </div>
     </div>
+
+    @unless (request()->routeIs('messages.*'))
+        <a
+            href="{{ route('messages.index') }}"
+            data-chat-unread-root
+            class="ff-chat-fab {{ ($unreadChatCount ?? 0) > 0 ? 'ff-has-unread' : '' }}"
+            aria-label="Open messages{{ ($unreadChatCount ?? 0) > 0 ? ' ('.($unreadChatCount ?? 0).' unread)' : '' }}"
+            title="Messages"
+        >
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+            <span
+                data-chat-unread-badge
+                class="ff-chat-unread-subscript ff-chat-unread-subscript--fab {{ ($unreadChatCount ?? 0) > 0 ? '' : 'hidden' }}"
+                aria-hidden="{{ ($unreadChatCount ?? 0) > 0 ? 'false' : 'true' }}"
+            >{{ ($unreadChatCount ?? 0) > 99 ? '99+' : ($unreadChatCount ?? 0) }}</span>
+        </a>
+    @endunless
 
     <script>
         (function () {

@@ -101,6 +101,55 @@ class Message extends Model
     }
 
     /**
+     * Inbox conversation list for the messages page (Fiverr-style).
+     *
+     * @return Collection<int, array{repair: RepairRequest, last_message: ?Message, unread_count: int, contact_name: string, contact_initials: string, sort_at: \Illuminate\Support\Carbon}>
+     */
+    public static function conversationThreadsForUser(User $user): Collection
+    {
+        $query = RepairRequest::query()
+            ->with(['customer', 'technician']);
+
+        if ($user->isCustomer()) {
+            $query->where('user_id', $user->id);
+        } elseif ($user->isTechnician()) {
+            $query->where('technician_id', $user->id);
+        }
+
+        $repairs = $query
+            ->where(function ($q) {
+                $q->whereHas('messages')
+                    ->orWhereNotNull('technician_id');
+            })
+            ->get()
+            ->filter(fn (RepairRequest $repair) => $repair->hasChatParticipant($user));
+
+        $unreadCounts = static::unreadCountsByRepairRequestForUser(
+            $user,
+            $repairs->pluck('id')
+        );
+
+        return $repairs
+            ->map(function (RepairRequest $repair) use ($user, $unreadCounts) {
+                $lastMessage = $repair->messages()->with('sender')->latest()->first();
+                $contact = $repair->inboxContactFor($user);
+
+                return [
+                    'repair' => $repair,
+                    'last_message' => $lastMessage,
+                    'unread_count' => (int) ($unreadCounts[$repair->id] ?? 0),
+                    'contact_name' => $contact?->name ?? 'Awaiting assignment',
+                    'contact_initials' => $contact
+                        ? strtoupper(substr($contact->name, 0, 2))
+                        : 'FF',
+                    'sort_at' => $lastMessage?->created_at ?? $repair->updated_at,
+                ];
+            })
+            ->sortByDesc('sort_at')
+            ->values();
+    }
+
+    /**
      * Messages the user has not read from other participants.
      */
     protected static function unreadQueryForUser(User $user)

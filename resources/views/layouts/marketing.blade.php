@@ -33,8 +33,16 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ route('login') }}" class="ff-btn-ghost ff-marketing-btn-login hidden sm:inline-flex">Log in</a>
-                <a href="{{ route('register') }}" class="ff-btn-primary ff-marketing-btn-signup !px-4 !py-2">Sign up</a>
+                @auth
+                    <a href="{{ route(auth()->user()->dashboardRoute()) }}" class="ff-btn-ghost ff-marketing-btn-login hidden sm:inline-flex">Dashboard</a>
+                    <form method="POST" action="{{ route('logout') }}" class="inline">
+                        @csrf
+                        <button type="submit" class="ff-btn-primary ff-marketing-btn-signup !px-4 !py-2">Log out</button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="ff-btn-ghost ff-marketing-btn-login hidden sm:inline-flex">Log in</a>
+                    <a href="{{ route('register') }}" class="ff-btn-primary ff-marketing-btn-signup !px-4 !py-2">Sign up</a>
+                @endauth
             </div>
         </nav>
     </header>
