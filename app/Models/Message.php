@@ -76,6 +76,31 @@ class Message extends Model
     }
 
     /**
+     * Recent unread chat threads for the notification panel.
+     *
+     * @return Collection<int, array{repair_request: RepairRequest, latest_message: Message, unread_count: int}>
+     */
+    public static function notificationThreadsForUser(User $user, int $limit = 8): Collection
+    {
+        return static::unreadQueryForUser($user)
+            ->with(['sender', 'repairRequest'])
+            ->latest()
+            ->get()
+            ->groupBy('repair_request_id')
+            ->take($limit)
+            ->map(function (Collection $messages) {
+                $latest = $messages->first();
+
+                return [
+                    'repair_request' => $latest->repairRequest,
+                    'latest_message' => $latest,
+                    'unread_count' => $messages->count(),
+                ];
+            })
+            ->values();
+    }
+
+    /**
      * Messages the user has not read from other participants.
      */
     protected static function unreadQueryForUser(User $user)

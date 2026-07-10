@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoicePaymentController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RepairRequestController;
 use App\Http\Controllers\TechnicianApplicationController;
@@ -98,6 +99,9 @@ Route::post('/stripe/webhook', [InvoicePaymentController::class, 'webhook'])
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'redirect']);
+
+    Route::get('/notifications', [NotificationController::class, 'index'])
+        ->name('notifications.index');
 
     Route::get('/technician/application', [TechnicianApplicationController::class, 'status'])
         ->middleware('role:technician')

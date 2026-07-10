@@ -22,20 +22,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer('layouts.partials.sidebar-nav', function ($view) {
+        View::composer(['layouts.partials.sidebar-nav', 'layouts.partials.top-navbar'], function ($view) {
             $user = auth()->user();
 
-            $view->with(
-                'unreadChatCount',
-                $user ? Message::unreadCountForUser($user) : 0
-            );
+            $unreadChatCount = $user ? Message::unreadCountForUser($user) : 0;
+            $pendingTechnicianApplications = $user?->isAdmin()
+                ? TechnicianApplication::where('status', TechnicianApplication::STATUS_PENDING)->count()
+                : 0;
 
-            $view->with(
-                'pendingTechnicianApplications',
-                $user?->isAdmin()
-                    ? TechnicianApplication::where('status', TechnicianApplication::STATUS_PENDING)->count()
-                    : 0
-            );
+            $view->with('unreadChatCount', $unreadChatCount);
+            $view->with('pendingTechnicianApplications', $pendingTechnicianApplications);
+            $view->with('notificationTotal', $unreadChatCount + $pendingTechnicianApplications);
         });
     }
 }
