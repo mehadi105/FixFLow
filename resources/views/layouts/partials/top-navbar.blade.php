@@ -12,6 +12,8 @@
     </div>
 
     <div class="flex items-center gap-x-3">
+      <x-notification-panel :notification-total="$notificationTotal ?? 0" />
+
       <details class="relative">
         <summary class="flex cursor-pointer list-none items-center gap-x-3 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-colors hover:bg-white [&::-webkit-details-marker]:hidden">
           <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-md shadow-indigo-500/25">

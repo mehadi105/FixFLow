@@ -761,6 +761,42 @@
     @apply inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white;
   }
 
+  .ff-notification-bell {
+    @apply relative;
+  }
+
+  .ff-notification-badge {
+    @apply absolute -right-1 -top-1 inline-flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white;
+  }
+
+  .ff-notification-panel {
+    @apply overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-xl shadow-slate-900/10;
+  }
+
+  .ff-notification-list {
+    @apply divide-y divide-slate-100;
+  }
+
+  .ff-notification-item {
+    @apply flex gap-3 px-4 py-3 transition-colors hover:bg-indigo-50/60;
+  }
+
+  .ff-notification-icon {
+    @apply mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset;
+  }
+
+  .ff-notification-icon--chat {
+    @apply bg-indigo-50 text-indigo-600 ring-indigo-500/20;
+  }
+
+  .ff-notification-icon--application {
+    @apply bg-amber-50 text-amber-700 ring-amber-500/20;
+  }
+
+  .ff-notification-empty {
+    @apply px-4 py-10 text-center;
+  }
+
   .ff-chat-typing {
     @apply px-2 py-1 text-xs italic text-slate-500;
   }
