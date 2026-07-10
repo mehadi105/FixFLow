@@ -84,8 +84,8 @@ Then open http://127.0.0.1:8000.
 1. Start the app with Reverb running (`composer run dev` or `php artisan reverb:start` in a second terminal).
 2. Log in as `customer@fixflow.test` in a normal browser window.
 3. Log in as `technician@fixflow.test` in an incognito/private window.
-4. Both accounts have **pre-seeded conversations** on John's repair requests — look for the unread badge on **My Repair Requests** / **Assigned Jobs** in the sidebar.
-5. Open the **repairing** request (technician sees 1 unread) or **diagnosing** request (customer sees 1 unread) → scroll to the **Conversation** panel.
+4. Both accounts have **pre-seeded conversations** on John's repair requests — look for the unread badge on the **Messages** link, chat icon, or sidebar.
+5. Open **Messages** (`/messages`) or use **Open conversation** on a repair detail page — pick the **repairing** thread (technician has 1 unread) or **diagnosing** thread (customer has 1 unread).
 6. Send a new message in one window; it should appear instantly in the other. Start typing to show the **typing indicator** (requires Reverb / Live status).
 
 If Reverb is not running, chat falls back to **polling** every few seconds (status badge shows "Polling"). Typing indicators only work in Live mode.
@@ -97,9 +97,9 @@ Use this flow for a viva or demo recording:
 | Step | Account | Action |
 | ---- | ------- | ------ |
 | 1 | Admin `admin@fixflow.test` | Dashboard → Users → show role management |
-| 2 | Admin | Repair Requests → assign a technician to a pending job |
-| 3 | Customer `customer@fixflow.test` | Dashboard → note unread badge → open diagnosing repair → read technician message |
-| 4 | Technician `technician@fixflow.test` | Assigned Jobs → open repairing request → reply in Conversation |
+| 2 | Admin | Repair Requests → filter **Pending** → assign a technician |
+| 3 | Customer `customer@fixflow.test` | **Messages** inbox → note unread badge → open diagnosing thread |
+| 4 | Technician `technician@fixflow.test` | **Messages** → open repairing thread → reply |
 | 5 | Both (two windows) | Live chat: send messages + typing indicator with Reverb running |
 | 6 | Admin | Reports + Invoices (mark paid) → Warranty on completed job |
 
@@ -115,33 +115,52 @@ php artisan migrate:fresh --seed
 
 Customers can pay unpaid invoices in-app via **Stripe Checkout**. Admins can still mark invoices paid manually for cash at the service center.
 
+### What you need to provide
+
+| Item | Required? | Where to get it |
+| ---- | --------- | --------------- |
+| **Stripe account** (free) | Yes | [dashboard.stripe.com/register](https://dashboard.stripe.com/register) |
+| **Publishable key** (`pk_test_...`) | Yes | Stripe Dashboard → **Developers** → **API keys** → Publishable key |
+| **Secret key** (`sk_test_...`) | Yes | Same page → Secret key (click Reveal) |
+| **Webhook signing secret** (`whsec_...`) | Optional* | Stripe CLI (`stripe listen`) or Dashboard → Webhooks |
+| **Stripe CLI** | Optional* | [stripe.com/docs/stripe-cli](https://stripe.com/docs/stripe-cli) — only for local webhooks |
+
+\* **Minimum for demo:** only `STRIPE_KEY` + `STRIPE_SECRET`. After payment, the **success return URL** marks the invoice paid even without a webhook.
+
+\* **Webhook** is recommended for production and if you close the browser before returning to the app.
+
 ### 1. Create a Stripe test account
 
 1. Sign up at [https://dashboard.stripe.com/register](https://dashboard.stripe.com/register)
-2. Stay in **Test mode** (toggle in the Stripe Dashboard)
+2. Stay in **Test mode** (toggle in the Stripe Dashboard — no real money)
 
 ### 2. Add keys to `.env`
 
 ```env
-STRIPE_KEY=pk_test_...
-STRIPE_SECRET=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_KEY=pk_test_your_publishable_key_here
+STRIPE_SECRET=your_stripe_test_secret_key_here
+STRIPE_WEBHOOK_SECRET=your_webhook_signing_secret_here
 STRIPE_CURRENCY=usd
 ```
 
-Get **Publishable key** and **Secret key** from Stripe → Developers → API keys.
-
-### 3. Webhook (local development)
-
-For automatic paid status via webhook, forward events to your app:
+Copy from `.env.example`, paste your keys, then restart the app:
 
 ```bash
+php artisan config:clear
+```
+
+**You do not need** to add card details, bank account, or business verification for **test mode**.
+
+### 3. Webhook (local development — optional)
+
+For automatic paid status if the customer never hits the success page:
+
+```bash
+stripe login
 stripe listen --forward-to http://127.0.0.1:8000/stripe/webhook
 ```
 
-Copy the `whsec_...` signing secret into `STRIPE_WEBHOOK_SECRET`.
-
-The success return URL also marks the invoice paid if the webhook is not running.
+Copy the `whsec_...` signing secret from the CLI output into `STRIPE_WEBHOOK_SECRET`.
 
 ### 4. Test payment flow
 
@@ -149,6 +168,8 @@ The success return URL also marks the invoice paid if the webhook is not running
 2. Log in as **customer** → **Invoices** → open invoice → **Pay with Stripe**
 3. Use test card: `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP
 4. After payment, invoice shows **paid** with method **Stripe (online)**
+
+If keys are missing, the customer sees: *"Online payment is not configured"* — use **Mark as paid** as admin instead.
 
 More test cards: [Stripe testing docs](https://docs.stripe.com/testing)
 

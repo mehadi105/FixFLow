@@ -23,10 +23,14 @@ class InvoicePaymentController extends Controller
             abort(403);
         }
 
-        if ($invoice->isPaid()) {
+        if (! $invoice->isPayable()) {
+            $message = $invoice->isDraft()
+                ? 'This invoice is still being reviewed. You will be notified when payment is due.'
+                : 'This invoice is already paid.';
+
             return redirect()
                 ->route('invoices.show', $invoice)
-                ->with('status', 'This invoice is already paid.');
+                ->with('status', $message);
         }
 
         if (! StripePaymentService::isConfigured()) {

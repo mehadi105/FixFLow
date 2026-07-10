@@ -10,6 +10,7 @@ class Invoice extends Model
 {
     use HasFactory;
 
+    public const STATUS_DRAFT = 'draft';
     public const STATUS_UNPAID = 'unpaid';
     public const STATUS_PAID = 'paid';
 
@@ -66,5 +67,18 @@ class Invoice extends Model
     public function isPaid(): bool
     {
         return $this->payment_status === self::STATUS_PAID;
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->payment_status === self::STATUS_DRAFT;
+    }
+
+    /**
+     * Customer may pay only after admin sends the invoice.
+     */
+    public function isPayable(): bool
+    {
+        return $this->payment_status === self::STATUS_UNPAID;
     }
 }

@@ -18,6 +18,16 @@ class RepairRequest extends Model
     public const STATUS_REPAIRING = 'repairing';
     public const STATUS_COMPLETED = 'completed';
 
+    public const FULFILLMENT_AWAITING_INVOICE = 'awaiting_invoice';
+    public const FULFILLMENT_AWAITING_PAYMENT = 'awaiting_payment';
+    public const FULFILLMENT_AWAITING_CHOICE = 'awaiting_choice';
+    public const FULFILLMENT_READY_FOR_PICKUP = 'ready_for_pickup';
+    public const FULFILLMENT_OUT_FOR_DELIVERY = 'out_for_delivery';
+    public const FULFILLMENT_FULFILLED = 'fulfilled';
+
+    public const FULFILLMENT_METHOD_PICKUP = 'pickup';
+    public const FULFILLMENT_METHOD_DELIVERY = 'delivery';
+
     /**
      * Ordered list of statuses, used for the timeline and filters.
      *
@@ -43,6 +53,9 @@ class RepairRequest extends Model
         'diagnosis_notes',
         'priority',
         'status',
+        'fulfillment_status',
+        'fulfillment_method',
+        'delivery_address',
         'image_path',
     ];
 
@@ -112,6 +125,36 @@ class RepairRequest extends Model
     public function getDeviceLabelAttribute(): string
     {
         return trim(($this->brand ? $this->brand.' ' : '').($this->model ?? '')) ?: $this->device_type;
+    }
+
+    public function fulfillmentLabel(): string
+    {
+        return match ($this->fulfillment_status) {
+            self::FULFILLMENT_AWAITING_INVOICE => 'Awaiting invoice review',
+            self::FULFILLMENT_AWAITING_PAYMENT => 'Awaiting payment',
+            self::FULFILLMENT_AWAITING_CHOICE => 'Choose pickup or delivery',
+            self::FULFILLMENT_READY_FOR_PICKUP => 'Ready for pickup',
+            self::FULFILLMENT_OUT_FOR_DELIVERY => 'Out for delivery',
+            self::FULFILLMENT_FULFILLED => $this->fulfillment_method === self::FULFILLMENT_METHOD_DELIVERY
+                ? 'Delivered'
+                : 'Picked up',
+            default => 'Not started',
+        };
+    }
+
+    public function canChooseFulfillment(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED
+            && $this->invoice?->isPaid()
+            && $this->fulfillment_status === self::FULFILLMENT_AWAITING_CHOICE;
+    }
+
+    public function canCompleteFulfillment(): bool
+    {
+        return in_array($this->fulfillment_status, [
+            self::FULFILLMENT_READY_FOR_PICKUP,
+            self::FULFILLMENT_OUT_FOR_DELIVERY,
+        ], true);
     }
 
     /**

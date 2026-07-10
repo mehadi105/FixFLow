@@ -85,7 +85,7 @@
     <x-dashboard-card title="Quick Actions">
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('repair-requests.index') }}" class="ff-btn-primary">Manage Requests</a>
-            <a href="{{ route('repair-requests.index') }}" class="ff-btn-secondary">Assign Technician</a>
+            <a href="{{ route('repair-requests.index', ['status' => 'pending']) }}" class="ff-btn-secondary">Assign Technician</a>
             <a href="{{ route('invoices.create') }}" class="ff-btn-secondary">Create Invoice</a>
             <a href="{{ url('/reports') }}" class="ff-btn-secondary">View Reports</a>
         </div>

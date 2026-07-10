@@ -164,6 +164,14 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:admin,technician', 'approved.technician')
         ->name('repair-requests.diagnosis');
 
+    Route::post('/repair-requests/{repairRequest}/fulfillment', [RepairRequestController::class, 'chooseFulfillment'])
+        ->middleware('role:customer')
+        ->name('repair-requests.fulfillment');
+
+    Route::post('/repair-requests/{repairRequest}/fulfillment/complete', [RepairRequestController::class, 'completeFulfillment'])
+        ->middleware('role:admin')
+        ->name('repair-requests.fulfillment.complete');
+
     /*
     | Messages inbox (Fiverr-style)
     */
@@ -204,6 +212,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])
         ->name('invoices.show');
+
+    Route::patch('/invoices/{invoice}', [InvoiceController::class, 'update'])
+        ->middleware('role:admin')
+        ->name('invoices.update');
+
+    Route::post('/invoices/{invoice}/send', [InvoiceController::class, 'send'])
+        ->middleware('role:admin')
+        ->name('invoices.send');
 
     Route::post('/invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])
         ->middleware('role:admin')

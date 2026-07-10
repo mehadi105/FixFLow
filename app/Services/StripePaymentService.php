@@ -81,6 +81,8 @@ class StripePaymentService
             'paid_at' => now(),
         ]);
 
+        app(InvoiceService::class)->handleInvoicePaid($invoice->fresh());
+
         return $invoice->fresh();
     }
 

@@ -54,7 +54,8 @@
                 <div class="ff-field sm:w-60">
                     <label for="payment_status" class="ff-label">Payment Status</label>
                     <select id="payment_status" name="payment_status" class="ff-input" required>
-                        <option value="unpaid" @selected(old('payment_status', 'unpaid') === 'unpaid')>Unpaid</option>
+                        <option value="draft" @selected(old('payment_status', 'draft') === 'draft')>Draft (review first)</option>
+                        <option value="unpaid" @selected(old('payment_status') === 'unpaid')>Unpaid (send to customer)</option>
                         <option value="paid" @selected(old('payment_status') === 'paid')>Paid</option>
                     </select>
                 </div>

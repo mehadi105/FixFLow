@@ -56,8 +56,9 @@
                 <ol class="relative ml-3 border-l border-slate-200">
                     @foreach ($statuses as $i => $statusKey)
                         @php
-                            $done = $i < $currentIndex;
-                            $active = $i === $currentIndex;
+                            $isFullyCompleted = $repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED;
+                            $done = $i < $currentIndex || ($isFullyCompleted && $i === $currentIndex);
+                            $active = ! $isFullyCompleted && $i === $currentIndex;
                         @endphp
                         <li class="mb-6 ml-6 last:mb-0">
                             <span class="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full {{ $done ? 'bg-indigo-600' : ($active ? 'bg-indigo-100 ring-2 ring-indigo-600' : 'bg-slate-100') }}">
@@ -169,12 +170,29 @@
 
             <x-dashboard-card title="Invoice">
                 @if ($repairRequest->invoice)
-                    <dl class="space-y-2 text-sm">
-                        <div class="flex justify-between"><dt class="text-slate-500">Invoice No</dt><dd class="font-medium text-slate-900">{{ $repairRequest->invoice->invoice_number }}</dd></div>
-                        <div class="flex justify-between"><dt class="text-slate-500">Amount</dt><dd class="font-medium text-slate-900">${{ number_format($repairRequest->invoice->total, 2) }}</dd></div>
-                        <div class="flex justify-between"><dt class="text-slate-500">Status</dt><dd><x-status-badge :status="$repairRequest->invoice->payment_status" /></dd></div>
-                    </dl>
-                    <a href="{{ route('invoices.show', $repairRequest->invoice) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">View Invoice</a>
+                    @if ($authUser->isCustomer() && $repairRequest->invoice->isDraft())
+                        <p class="text-sm text-slate-600">
+                            Your repair is complete. Our team is preparing your invoice — you will be able to pay shortly.
+                        </p>
+                        <p class="mt-2 text-xs text-slate-500">Return status: <x-status-badge :status="str_replace('_', ' ', $repairRequest->fulfillment_status ?? 'awaiting invoice')" /></p>
+                    @else
+                        <dl class="space-y-2 text-sm">
+                            <div class="flex justify-between"><dt class="text-slate-500">Invoice No</dt><dd class="font-medium text-slate-900">{{ $repairRequest->invoice->invoice_number }}</dd></div>
+                            <div class="flex justify-between"><dt class="text-slate-500">Amount</dt><dd class="font-medium text-slate-900">${{ number_format($repairRequest->invoice->total, 2) }}</dd></div>
+                            <div class="flex justify-between"><dt class="text-slate-500">Status</dt><dd><x-status-badge :status="$repairRequest->invoice->payment_status" /></dd></div>
+                        </dl>
+                        <a href="{{ route('invoices.show', $repairRequest->invoice) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+                            @if ($repairRequest->invoice->isPaid())
+                                View Invoice
+                            @elseif ($repairRequest->invoice->isPayable())
+                                Pay Invoice
+                            @else
+                                Review Invoice
+                            @endif
+                        </a>
+                    @endif
+                @elseif ($repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED)
+                    <p class="text-sm text-slate-500">Invoice will be generated automatically when the repair is marked completed.</p>
                 @elseif ($authUser->isAdmin())
                     <p class="text-sm text-slate-500">No invoice generated yet.</p>
                     <a href="{{ route('invoices.create', ['repair_request_id' => $repairRequest->id]) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Create Invoice</a>
@@ -182,6 +200,105 @@
                     <p class="text-sm text-slate-500">No invoice generated yet.</p>
                 @endif
             </x-dashboard-card>
+
+            @if ($repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED)
+                <x-dashboard-card title="Device Return">
+                    @if ($repairRequest->fulfillment_status)
+                        <dl class="space-y-2 text-sm">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-slate-500">Return status</dt>
+                                <dd><x-status-badge :status="str_replace('_', ' ', $repairRequest->fulfillment_status)" /></dd>
+                            </div>
+                            @if ($repairRequest->fulfillment_method)
+                                <div class="flex justify-between gap-3">
+                                    <dt class="text-slate-500">Method</dt>
+                                    <dd class="font-medium text-slate-900">{{ $repairRequest->fulfillment_method === 'delivery' ? 'Home delivery' : 'Service center pickup' }}</dd>
+                                </div>
+                            @endif
+                            @if ($repairRequest->delivery_address)
+                                <div>
+                                    <dt class="text-slate-500">Delivery address</dt>
+                                    <dd class="mt-1 font-medium text-slate-900">{{ $repairRequest->delivery_address }}</dd>
+                                </div>
+                            @endif
+                        </dl>
+                    @endif
+
+                    @if ($repairRequest->fulfillment_status === \App\Models\RepairRequest::FULFILLMENT_AWAITING_INVOICE)
+                        <p class="mt-3 text-sm text-slate-600">
+                            @if ($authUser->isAdmin())
+                                Repair is complete. Review the <strong>draft invoice</strong>, adjust amounts if needed, then <strong>send to customer</strong>.
+                            @else
+                                Repair is complete. Your invoice is being prepared by our billing team.
+                            @endif
+                        </p>
+                    @endif
+
+                    @if ($repairRequest->fulfillment_status === \App\Models\RepairRequest::FULFILLMENT_AWAITING_PAYMENT)
+                        <p class="mt-3 text-sm text-slate-600">
+                            Repair is complete. Pay the invoice to choose <strong>home delivery</strong> or <strong>pickup at the service center</strong>.
+                        </p>
+                    @endif
+
+                    @if ($authUser->isCustomer() && $repairRequest->canChooseFulfillment())
+                        <form method="POST" action="{{ route('repair-requests.fulfillment', $repairRequest) }}" class="mt-4 space-y-4">
+                            @csrf
+                            <p class="text-sm font-medium text-slate-800">How would you like to receive your device?</p>
+                            <div class="space-y-2">
+                                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 hover:border-indigo-300">
+                                    <input type="radio" name="fulfillment_method" value="pickup" class="mt-1" @checked(old('fulfillment_method') === 'pickup') required>
+                                    <span>
+                                        <span class="block text-sm font-semibold text-slate-900">Pickup at service center</span>
+                                        <span class="block text-xs text-slate-500">123 Repair Lane, Tech City — Mon–Sat, 9 AM–6 PM</span>
+                                    </span>
+                                </label>
+                                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 hover:border-indigo-300">
+                                    <input type="radio" name="fulfillment_method" value="delivery" class="mt-1" @checked(old('fulfillment_method') === 'delivery')>
+                                    <span>
+                                        <span class="block text-sm font-semibold text-slate-900">Home delivery</span>
+                                        <span class="block text-xs text-slate-500">We deliver your repaired device to your address</span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="ff-field">
+                                <label for="delivery_address" class="ff-label">Delivery address</label>
+                                <textarea id="delivery_address" name="delivery_address" rows="3" class="ff-input" placeholder="Street, area, city, postal code">{{ old('delivery_address') }}</textarea>
+                                <p class="mt-1 text-xs text-slate-500">Required only if you choose home delivery.</p>
+                            </div>
+                            @error('fulfillment')
+                                <p class="text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            @error('delivery_address')
+                                <p class="text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            <button type="submit" class="ff-btn-primary w-full">Confirm return option</button>
+                        </form>
+                    @elseif ($repairRequest->fulfillment_status === \App\Models\RepairRequest::FULFILLMENT_READY_FOR_PICKUP)
+                        <p class="mt-3 text-sm text-emerald-700">
+                            Your device is ready for pickup at <strong>FixFlow Service Center, 123 Repair Lane, Tech City</strong>.
+                        </p>
+                    @elseif ($repairRequest->fulfillment_status === \App\Models\RepairRequest::FULFILLMENT_OUT_FOR_DELIVERY)
+                        <p class="mt-3 text-sm text-indigo-700">
+                            Your device is out for delivery. Our team will contact you when it arrives.
+                        </p>
+                    @elseif ($repairRequest->fulfillment_status === \App\Models\RepairRequest::FULFILLMENT_FULFILLED)
+                        <p class="mt-3 text-sm text-emerald-700">
+                            {{ $repairRequest->fulfillment_method === 'delivery'
+                                ? 'Your device has been delivered successfully.'
+                                : 'Your device has been collected from the service center.' }}
+                        </p>
+                    @endif
+
+                    @if ($authUser->isAdmin() && $repairRequest->canCompleteFulfillment())
+                        <form method="POST" action="{{ route('repair-requests.fulfillment.complete', $repairRequest) }}" class="mt-4">
+                            @csrf
+                            <button type="submit" class="ff-btn-primary w-full">
+                                Mark as {{ $repairRequest->fulfillment_method === 'delivery' ? 'Delivered' : 'Picked Up' }}
+                            </button>
+                        </form>
+                    @endif
+                </x-dashboard-card>
+            @endif
 
             <x-dashboard-card title="Warranty">
                 @if ($repairRequest->warranty)

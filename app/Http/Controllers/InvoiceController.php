@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\RepairRequest;
+use App\Services\InvoiceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,9 +22,10 @@ class InvoiceController extends Controller
             ->with(['customer', 'repairRequest'])
             ->latest();
 
-        // Customers only see their own invoices.
+        // Customers only see sent or paid invoices — not drafts under review.
         if ($user->isCustomer()) {
-            $query->where('user_id', $user->id);
+            $query->where('user_id', $user->id)
+                ->whereIn('payment_status', [Invoice::STATUS_UNPAID, Invoice::STATUS_PAID]);
         }
 
         return view('invoices.index', [
@@ -54,7 +56,7 @@ class InvoiceController extends Controller
             'service_charge' => ['required', 'numeric', 'min:0'],
             'parts_cost' => ['required', 'numeric', 'min:0'],
             'discount' => ['required', 'numeric', 'min:0'],
-            'payment_status' => ['required', 'in:unpaid,paid'],
+            'payment_status' => ['required', 'in:draft,unpaid,paid'],
         ]);
 
         $repairRequest = RepairRequest::findOrFail($validated['repair_request_id']);
@@ -73,6 +75,17 @@ class InvoiceController extends Controller
 
         $invoice->update(['invoice_number' => 'INV-'.now()->year.'-'.str_pad((string) $invoice->id, 4, '0', STR_PAD_LEFT)]);
 
+        if ($repairRequest->status === RepairRequest::STATUS_COMPLETED) {
+            $invoices = app(InvoiceService::class);
+            if ($invoice->isDraft()) {
+                $repairRequest->update(['fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_INVOICE]);
+            } elseif ($invoice->isPayable()) {
+                $repairRequest->update(['fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT]);
+            } elseif ($invoice->isPaid()) {
+                $invoices->handleInvoicePaid($invoice);
+            }
+        }
+
         return redirect()
             ->route('invoices.show', $invoice)
             ->with('status', 'Invoice created successfully.');
@@ -90,6 +103,13 @@ class InvoiceController extends Controller
             abort(403);
         }
 
+        // Customers cannot view draft invoices until admin sends them.
+        if ($user->isCustomer() && $invoice->isDraft()) {
+            return redirect()
+                ->route('repair-requests.show', $invoice->repair_request_id)
+                ->with('status', 'Your invoice is being reviewed by our team. You will be notified when payment is due.');
+        }
+
         $invoice->load(['customer', 'repairRequest.technician']);
 
         return view('invoices.show', [
@@ -100,9 +120,59 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Update draft invoice amounts before sending to the customer.
+     */
+    public function update(Request $request, Invoice $invoice, InvoiceService $invoices): RedirectResponse
+    {
+        if (! $invoice->isDraft()) {
+            return back()->withErrors([
+                'invoice' => 'Only draft invoices can be edited. Sent invoices are locked.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'service_charge' => ['required', 'numeric', 'min:0'],
+            'parts_cost' => ['required', 'numeric', 'min:0'],
+            'discount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $total = $invoices->recalculateTotal(
+            $invoice,
+            (float) $validated['service_charge'],
+            (float) $validated['parts_cost'],
+            (float) $validated['discount'],
+        );
+
+        $invoice->update([
+            'service_charge' => $validated['service_charge'],
+            'parts_cost' => $validated['parts_cost'],
+            'discount' => $validated['discount'],
+            'total' => $total,
+        ]);
+
+        return back()->with('status', 'Draft invoice updated. Send it to the customer when ready.');
+    }
+
+    /**
+     * Send a reviewed draft invoice to the customer for payment.
+     */
+    public function send(Request $request, Invoice $invoice, InvoiceService $invoices): RedirectResponse
+    {
+        if (! $invoice->isDraft()) {
+            return back()->withErrors([
+                'invoice' => 'This invoice has already been sent or paid.',
+            ]);
+        }
+
+        $invoices->sendInvoiceToCustomer($invoice);
+
+        return back()->with('status', 'Invoice sent to customer. They can now pay online or at the service center.');
+    }
+
+    /**
      * Toggle an invoice between paid and unpaid (admins only).
      */
-    public function markPaid(Request $request, Invoice $invoice): RedirectResponse
+    public function markPaid(Request $request, Invoice $invoice, InvoiceService $invoices): RedirectResponse
     {
         if ($invoice->isPaid()) {
             $invoice->update([
@@ -110,12 +180,27 @@ class InvoiceController extends Controller
                 'payment_method' => null,
                 'paid_at' => null,
             ]);
+
+            $invoice->repairRequest?->update([
+                'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT,
+                'fulfillment_method' => null,
+                'delivery_address' => null,
+            ]);
         } else {
+            if ($invoice->isDraft()) {
+                $invoices->sendInvoiceToCustomer($invoice->fresh());
+                $invoice->refresh();
+            }
+
             $invoice->update([
                 'payment_status' => Invoice::STATUS_PAID,
                 'payment_method' => 'manual',
                 'paid_at' => now(),
             ]);
+
+            if ($invoice->repairRequest) {
+                $invoices->handleInvoicePaid($invoice);
+            }
         }
 
         return back()->with('status', 'Payment status updated.');

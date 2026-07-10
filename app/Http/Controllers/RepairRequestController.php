@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\RepairRequest;
 use App\Models\User;
+use App\Services\InvoiceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -188,7 +189,7 @@ class RepairRequestController extends Controller
     /**
      * Update the repair status (assigned technician or admin).
      */
-    public function updateStatus(Request $request, RepairRequest $repairRequest): RedirectResponse
+    public function updateStatus(Request $request, RepairRequest $repairRequest, InvoiceService $invoices): RedirectResponse
     {
         $this->authorizeWorker($request, $repairRequest);
 
@@ -198,7 +199,15 @@ class RepairRequestController extends Controller
 
         $repairRequest->update(['status' => $validated['status']]);
 
-        return back()->with('status', 'Repair status updated.');
+        if ($validated['status'] === RepairRequest::STATUS_COMPLETED) {
+            $invoices->ensureInvoiceForCompletedRepair($repairRequest->fresh());
+        }
+
+        $message = $validated['status'] === RepairRequest::STATUS_COMPLETED
+            ? 'Repair marked completed. A draft invoice has been generated for admin review.'
+            : 'Repair status updated.';
+
+        return back()->with('status', $message);
     }
 
     /**
@@ -215,6 +224,77 @@ class RepairRequestController extends Controller
         $repairRequest->update(['diagnosis_notes' => $validated['diagnosis_notes']]);
 
         return back()->with('status', 'Diagnosis notes saved.');
+    }
+
+    /**
+     * Customer chooses pickup at service center or home delivery after payment.
+     */
+    public function chooseFulfillment(Request $request, RepairRequest $repairRequest): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->isCustomer() || $repairRequest->user_id !== $user->id) {
+            abort(403);
+        }
+
+        if (! $repairRequest->canChooseFulfillment()) {
+            return back()->withErrors([
+                'fulfillment' => 'Pay your invoice first, then choose how to receive your device.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'fulfillment_method' => ['required', Rule::in([
+                RepairRequest::FULFILLMENT_METHOD_PICKUP,
+                RepairRequest::FULFILLMENT_METHOD_DELIVERY,
+            ])],
+            'delivery_address' => [
+                Rule::requiredIf($request->input('fulfillment_method') === RepairRequest::FULFILLMENT_METHOD_DELIVERY),
+                'nullable',
+                'string',
+                'max:500',
+            ],
+        ]);
+
+        $status = $validated['fulfillment_method'] === RepairRequest::FULFILLMENT_METHOD_PICKUP
+            ? RepairRequest::FULFILLMENT_READY_FOR_PICKUP
+            : RepairRequest::FULFILLMENT_OUT_FOR_DELIVERY;
+
+        $repairRequest->update([
+            'fulfillment_method' => $validated['fulfillment_method'],
+            'delivery_address' => $validated['fulfillment_method'] === RepairRequest::FULFILLMENT_METHOD_DELIVERY
+                ? $validated['delivery_address']
+                : null,
+            'fulfillment_status' => $status,
+        ]);
+
+        $message = $validated['fulfillment_method'] === RepairRequest::FULFILLMENT_METHOD_PICKUP
+            ? 'Pickup selected. Your device will be ready at the FixFlow service center.'
+            : 'Home delivery scheduled. We will deliver your device to the address provided.';
+
+        return back()->with('status', $message);
+    }
+
+    /**
+     * Admin confirms the device was picked up or delivered.
+     */
+    public function completeFulfillment(Request $request, RepairRequest $repairRequest): RedirectResponse
+    {
+        if (! $request->user()->isAdmin()) {
+            abort(403);
+        }
+
+        if (! $repairRequest->canCompleteFulfillment()) {
+            return back()->withErrors([
+                'fulfillment' => 'This repair is not waiting for pickup or delivery confirmation.',
+            ]);
+        }
+
+        $repairRequest->update([
+            'fulfillment_status' => RepairRequest::FULFILLMENT_FULFILLED,
+        ]);
+
+        return back()->with('status', 'Device handover marked as completed.');
     }
 
     /**

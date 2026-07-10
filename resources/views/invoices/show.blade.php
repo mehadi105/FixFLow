@@ -1,7 +1,7 @@
 <x-app-layout :role="$role ?? 'customer'">
     <x-page-header title="Invoice {{ $invoice->invoice_number }}" description="Issued on {{ $invoice->created_at->format('M d, Y') }}">
         <x-slot name="actions">
-            @if (auth()->user()->isCustomer() && ! $invoice->isPaid() && ($stripeEnabled ?? false))
+            @if (auth()->user()->isCustomer() && $invoice->isPayable() && ($stripeEnabled ?? false))
                 <form method="POST" action="{{ route('invoices.pay', $invoice) }}" class="print:hidden">
                     @csrf
                     <button type="submit" class="ff-btn-primary">
@@ -10,10 +10,18 @@
                 </form>
             @endif
             @if (auth()->user()->isAdmin())
+                @if ($invoice->isDraft())
+                    <form method="POST" action="{{ route('invoices.send', $invoice) }}" class="print:hidden">
+                        @csrf
+                        <button type="submit" class="ff-btn-primary">
+                            Send to Customer
+                        </button>
+                    </form>
+                @endif
                 <form method="POST" action="{{ route('invoices.mark-paid', $invoice) }}" class="print:hidden">
                     @csrf
                     <button type="submit" class="{{ $invoice->isPaid() ? 'ff-btn-secondary' : 'ff-btn-primary' }}">
-                        {{ $invoice->isPaid() ? 'Mark as Unpaid' : 'Mark as Paid' }}
+                        {{ $invoice->isPaid() ? 'Mark as Unpaid' : ($invoice->isDraft() ? 'Mark as Paid (cash)' : 'Mark as Paid') }}
                     </button>
                 </form>
             @endif
@@ -31,9 +39,27 @@
         </div>
     @endif
 
-    @if ($errors->has('payment'))
+    @if ($errors->has('payment') || $errors->has('invoice'))
         <div class="mb-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200 print:hidden">
-            {{ $errors->first('payment') }}
+            {{ $errors->first('payment') ?: $errors->first('invoice') }}
+        </div>
+    @endif
+
+    @if ($invoice->isDraft() && auth()->user()->isAdmin())
+        <div class="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200 print:hidden">
+            This is a <strong>draft invoice</strong>. Review the amounts below, edit if needed, then click <strong>Send to Customer</strong>.
+        </div>
+    @endif
+
+    @if ($invoice->isPayable() && auth()->user()->isCustomer())
+        <div class="mb-6 rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-800 ring-1 ring-indigo-200 print:hidden">
+            Your invoice is ready. Pay below to schedule pickup or home delivery.
+        </div>
+    @endif
+
+    @if ($invoice->isPaid() && auth()->user()->isCustomer() && $invoice->repairRequest?->canChooseFulfillment())
+        <div class="mb-6 rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-800 ring-1 ring-indigo-200 print:hidden">
+            Payment received. <a href="{{ route('repair-requests.show', $invoice->repairRequest) }}" class="font-semibold underline">Choose pickup or home delivery</a> for your device.
         </div>
     @endif
 
@@ -75,6 +101,28 @@
             </div>
 
             <div class="mt-8 ff-table-wrap">
+                @if ($invoice->isDraft() && auth()->user()->isAdmin())
+                    <form method="POST" action="{{ route('invoices.update', $invoice) }}" class="space-y-4 print:hidden">
+                        @csrf
+                        @method('PATCH')
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div class="ff-field">
+                                <label for="service_charge" class="ff-label">Service Charge ($)</label>
+                                <input type="number" step="0.01" min="0" id="service_charge" name="service_charge" value="{{ old('service_charge', $invoice->service_charge) }}" class="ff-input" required>
+                            </div>
+                            <div class="ff-field">
+                                <label for="parts_cost" class="ff-label">Parts Cost ($)</label>
+                                <input type="number" step="0.01" min="0" id="parts_cost" name="parts_cost" value="{{ old('parts_cost', $invoice->parts_cost) }}" class="ff-input" required>
+                            </div>
+                            <div class="ff-field">
+                                <label for="discount" class="ff-label">Discount ($)</label>
+                                <input type="number" step="0.01" min="0" id="discount" name="discount" value="{{ old('discount', $invoice->discount) }}" class="ff-input" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ff-btn-secondary">Save Draft Amounts</button>
+                    </form>
+                    <hr class="my-6 border-slate-200">
+                @endif
                 <table class="ff-table min-w-full">
                     <thead>
                         <tr>

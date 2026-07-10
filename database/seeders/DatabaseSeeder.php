@@ -46,6 +46,7 @@ class DatabaseSeeder extends Seeder
 
             $this->seedApprovedTechnicianApplications($technicians, $admin);
             $this->seedPendingTechnicianApplication();
+            $this->seedDemoPaymentFlow($john, $technicians->first());
 
             return;
         }
@@ -99,6 +100,17 @@ class DatabaseSeeder extends Seeder
                         'updated_at' => $createdAt,
                     ]);
 
+                    $repair->update([
+                        'fulfillment_status' => match (true) {
+                            $invoice->isPaid() => RepairRequest::FULFILLMENT_FULFILLED,
+                            $invoice->isDraft() => RepairRequest::FULFILLMENT_AWAITING_INVOICE,
+                            default => RepairRequest::FULFILLMENT_AWAITING_PAYMENT,
+                        },
+                        'fulfillment_method' => $invoice->isPaid()
+                            ? RepairRequest::FULFILLMENT_METHOD_PICKUP
+                            : null,
+                    ]);
+
                     Warranty::factory()->create([
                         'repair_request_id' => $repair->id,
                         'user_id' => $repair->user_id,
@@ -121,6 +133,50 @@ class DatabaseSeeder extends Seeder
 
         $this->seedDemoChat($john);
         $this->seedPendingTechnicianApplication();
+        $this->seedDemoPaymentFlow($john, $technicians->first());
+    }
+
+    /**
+     * Dedicated completed repair with draft invoice for admin review → send → pay demo.
+     */
+    private function seedDemoPaymentFlow(User $john, User $technician): void
+    {
+        $paymentDemo = RepairRequest::updateOrCreate(
+            ['reference' => 'RR-DEMO-PAY'],
+            [
+                'user_id' => $john->id,
+                'technician_id' => $technician->id,
+                'device_type' => 'Smartphone',
+                'brand' => 'Samsung',
+                'model' => 'Galaxy S23',
+                'serial_number' => 'SN-DEMO-7721',
+                'issue_description' => 'Cracked screen after drop. Touch works but glass is shattered.',
+                'diagnosis_notes' => 'Screen assembly replacement completed. Device tested and working.',
+                'priority' => 'high',
+                'status' => RepairRequest::STATUS_COMPLETED,
+                'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_INVOICE,
+                'fulfillment_method' => null,
+                'delivery_address' => null,
+            ]
+        );
+
+        $invoice = Invoice::updateOrCreate(
+            ['repair_request_id' => $paymentDemo->id],
+            [
+                'user_id' => $john->id,
+                'service_charge' => 95.00,
+                'parts_cost' => 145.00,
+                'discount' => 10.00,
+                'total' => 230.00,
+                'payment_status' => Invoice::STATUS_DRAFT,
+            ]
+        );
+
+        if (! $invoice->invoice_number) {
+            $invoice->update([
+                'invoice_number' => 'INV-'.now()->year.'-'.str_pad((string) $invoice->id, 4, '0', STR_PAD_LEFT),
+            ]);
+        }
     }
 
     /**
