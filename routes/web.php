@@ -165,6 +165,18 @@ Route::middleware('auth')->group(function () {
         ->name('repair-requests.diagnosis');
 
     /*
+    | Messages inbox (Fiverr-style)
+    */
+    Route::get('/messages', [MessageController::class, 'inbox'])
+        ->name('messages.index');
+
+    Route::get('/messages/unread-count', [MessageController::class, 'unreadCount'])
+        ->name('messages.unread-count');
+
+    Route::get('/messages/{repairRequest}', [MessageController::class, 'inbox'])
+        ->name('messages.show');
+
+    /*
     | Chat (Module C3)
     */
     Route::get('/repair-requests/{repairRequest}/messages', [MessageController::class, 'index'])

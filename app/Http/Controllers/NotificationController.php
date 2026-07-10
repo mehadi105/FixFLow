@@ -30,7 +30,7 @@ class NotificationController extends Controller
                     'preview' => Str::limit($message->body, 100),
                     'sender' => $message->sender->name,
                     'unread_count' => $thread['unread_count'],
-                    'url' => route('repair-requests.show', $repair),
+                    'url' => route('messages.show', $repair),
                     'time' => $message->created_at->diffForHumans(),
                     'timestamp' => $message->created_at->timestamp,
                 ];

@@ -113,4 +113,20 @@ class RepairRequest extends Model
     {
         return trim(($this->brand ? $this->brand.' ' : '').($this->model ?? '')) ?: $this->device_type;
     }
+
+    /**
+     * Primary contact shown in the inbox for the given viewer.
+     */
+    public function inboxContactFor(User $viewer): ?User
+    {
+        if ($viewer->isCustomer()) {
+            return $this->technician;
+        }
+
+        if ($viewer->isTechnician()) {
+            return $this->customer;
+        }
+
+        return $this->customer;
+    }
 }

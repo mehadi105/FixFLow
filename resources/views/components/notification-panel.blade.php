@@ -55,8 +55,8 @@
         </div>
 
         <div class="flex items-center justify-between gap-2 border-t border-slate-100 px-4 py-2.5">
-            <a href="{{ route('repair-requests.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-500">
-                All repair chats
+            <a href="{{ route('messages.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-500">
+                Open messages
             </a>
             @if (auth()->user()?->isAdmin())
                 <a href="{{ route('technician-applications.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-500">

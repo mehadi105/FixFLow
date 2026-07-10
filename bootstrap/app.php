@@ -25,6 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'stripe/webhook',
         ]);
+
+        $middleware->redirectUsersTo(
+            fn (Request $request) => route($request->user()->dashboardRoute())
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

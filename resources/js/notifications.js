@@ -101,10 +101,13 @@ class NotificationPanel {
     }
 
     render(data) {
-        const total = Number(data.total ?? 0);
         const chatUnread = Number(data.chat_unread ?? 0);
         const pendingApps = Number(data.pending_applications ?? 0);
         const items = Array.isArray(data.notifications) ? data.notifications : [];
+
+        window.updateChatUnreadBadges?.(chatUnread);
+
+        const total = chatUnread + pendingApps;
 
         if (this.badge) {
             if (total > 0) {
