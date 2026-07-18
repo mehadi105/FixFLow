@@ -35,14 +35,23 @@
                 <p class="py-6 text-center text-sm text-slate-500">No repair data yet.</p>
             @else
                 <div class="space-y-4">
-                    @foreach ($statusSummary as $status => $count)
-                        @php $percent = round(($count / $totalRepairs) * 100); @endphp
+                    @php
+                        $statusKeys = array_keys($statusSummary);
+                        $statusIndex = 0;
+                    @endphp
+                    @while ($statusIndex < count($statusKeys))
+                        @php
+                            $status = $statusKeys[$statusIndex];
+                            $count = $statusSummary[$status];
+                            $percent = round(($count / $totalRepairs) * 100);
+                            $statusIndex++;
+                        @endphp
                         <x-progress-bar
                             :label="ucfirst($status)"
                             :value="$count . ' (' . $percent . '%)'"
                             :percent="$percent"
                         />
-                    @endforeach
+                    @endwhile
                 </div>
             @endif
         </x-dashboard-card>

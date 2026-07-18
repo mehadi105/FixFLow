@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            \App\Http\Middleware\AddFixFlowResponseHeaders::class,
             \App\Http\Middleware\EnsureApprovedTechnician::class,
         ]);
 

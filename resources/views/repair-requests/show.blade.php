@@ -192,7 +192,12 @@
                         </a>
                     @endif
                 @elseif ($repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED)
-                    <p class="text-sm text-slate-500">Invoice will be generated automatically when the repair is marked completed.</p>
+                    @if ($authUser->isAdmin())
+                        <p class="text-sm text-slate-500">No invoice is attached to this completed repair.</p>
+                        <a href="{{ route('invoices.create', ['repair_request_id' => $repairRequest->id]) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Create Replacement Invoice</a>
+                    @else
+                        <p class="text-sm text-slate-500">Our billing team is preparing your invoice.</p>
+                    @endif
                 @elseif ($authUser->isAdmin())
                     <p class="text-sm text-slate-500">No invoice generated yet.</p>
                     <a href="{{ route('invoices.create', ['repair_request_id' => $repairRequest->id]) }}" class="mt-3 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800">Create Invoice</a>

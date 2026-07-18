@@ -7,6 +7,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\RepairRequestController;
 use App\Http\Controllers\TechnicianApplicationController;
 use App\Http\Controllers\UserController;
@@ -48,12 +49,13 @@ Route::middleware('guest')->group(function () {
         return back()->withErrors([
             'email' => 'These credentials do not match our records.',
         ])->onlyInput('email');
-    });
+    })->middleware('throttle:login');
 
     Route::get('/forgot-password', [PasswordResetController::class, 'create'])
         ->name('password.request');
 
     Route::post('/forgot-password', [PasswordResetController::class, 'store'])
+        ->middleware('throttle:password-reset')
         ->name('password.email');
 
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])
@@ -70,6 +72,7 @@ Route::middleware('guest')->group(function () {
         ->name('technician.apply');
 
     Route::post('/technician/apply', [TechnicianApplicationController::class, 'store'])
+        ->middleware('throttle:registration')
         ->name('technician.apply.store');
 
     Route::post('/register', function (Request $request) {
@@ -90,7 +93,7 @@ Route::middleware('guest')->group(function () {
         $request->session()->regenerate();
 
         return redirect()->route($user->dashboardRoute());
-    });
+    })->middleware('throttle:registration');
 });
 
 Route::post('/logout', function (Request $request) {
@@ -114,7 +117,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'redirect']);
 
     Route::get('/notifications', [NotificationController::class, 'index'])
+        ->middleware('throttle:ajax')
         ->name('notifications.index');
+
+    Route::post('/preferences/table-density', [PreferenceController::class, 'updateTableDensity'])
+        ->middleware('throttle:ajax')
+        ->name('preferences.table-density');
 
     Route::get('/technician/application', [TechnicianApplicationController::class, 'status'])
         ->middleware('role:technician')
@@ -192,6 +200,7 @@ Route::middleware('auth')->group(function () {
         ->name('messages.index');
 
     Route::get('/messages/unread-count', [MessageController::class, 'unreadCount'])
+        ->middleware('throttle:ajax')
         ->name('messages.unread-count');
 
     Route::get('/messages/{repairRequest}', [MessageController::class, 'inbox'])
@@ -201,12 +210,15 @@ Route::middleware('auth')->group(function () {
     | Chat (Module C3)
     */
     Route::get('/repair-requests/{repairRequest}/messages', [MessageController::class, 'index'])
+        ->middleware('throttle:ajax')
         ->name('repair-requests.messages.index');
 
     Route::post('/repair-requests/{repairRequest}/messages', [MessageController::class, 'store'])
+        ->middleware('throttle:messages')
         ->name('repair-requests.messages.store');
 
     Route::post('/repair-requests/{repairRequest}/messages/read', [MessageController::class, 'markRead'])
+        ->middleware('throttle:ajax')
         ->name('repair-requests.messages.read');
 
     /*
@@ -229,6 +241,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/invoices/{invoice}', [InvoiceController::class, 'update'])
         ->middleware('role:admin')
         ->name('invoices.update');
+
+    Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('invoices.destroy');
 
     Route::post('/invoices/{invoice}/send', [InvoiceController::class, 'send'])
         ->middleware('role:admin')

@@ -1,3 +1,7 @@
+@php
+    $tableDensity = request()->cookie('ff_table_density', 'comfortable');
+@endphp
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -11,7 +15,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
-<body class="ff-mesh font-sans antialiased" data-chat-unread-url="{{ auth()->check() ? route('messages.unread-count') : '' }}">
+<body class="ff-mesh font-sans antialiased {{ $tableDensity === 'compact' ? 'ff-density-compact' : '' }}" data-chat-unread-url="{{ auth()->check() ? route('messages.unread-count') : '' }}">
     <div class="min-h-screen lg:flex">
         <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-slate-900/60 backdrop-blur-sm lg:hidden" aria-hidden="true"></div>
 

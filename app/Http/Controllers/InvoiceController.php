@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\RepairRequest;
 use App\Services\InvoiceService;
+use App\Services\StripePaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -115,7 +116,7 @@ class InvoiceController extends Controller
         return view('invoices.show', [
             'role' => $user->role,
             'invoice' => $invoice,
-            'stripeEnabled' => \App\Services\StripePaymentService::isConfigured(),
+            'stripeEnabled' => StripePaymentService::isConfigured(),
         ]);
     }
 
@@ -204,6 +205,33 @@ class InvoiceController extends Controller
         }
 
         return back()->with('status', 'Payment status updated.');
+    }
+
+    /**
+     * Delete only an unsent draft invoice and return to its repair.
+     */
+    public function destroy(Invoice $invoice): RedirectResponse
+    {
+        if (! $invoice->isDraft()) {
+            return back()->withErrors([
+                'invoice' => 'Only unsent draft invoices can be deleted.',
+            ]);
+        }
+
+        $repairRequest = $invoice->repairRequest;
+
+        // Eloquent delete example; the paid/sent states above remain protected.
+        $invoice->delete();
+
+        if ($repairRequest?->status === RepairRequest::STATUS_COMPLETED) {
+            $repairRequest->update([
+                'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_INVOICE,
+            ]);
+        }
+
+        return redirect()
+            ->route('repair-requests.show', $repairRequest)
+            ->with('status', 'Draft invoice deleted. You can create a replacement invoice.');
     }
 
     /**

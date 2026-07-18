@@ -33,6 +33,13 @@
             <p class="truncate text-sm font-semibold text-slate-900">{{ auth()->user()->name ?? 'User' }}</p>
             <p class="truncate text-xs text-slate-500">{{ auth()->user()->email ?? '' }}</p>
           </div>
+          <form method="POST" action="{{ route('preferences.table-density') }}" class="border-b border-slate-100">
+            @csrf
+            <input type="hidden" name="density" value="{{ request()->cookie('ff_table_density', 'comfortable') === 'compact' ? 'comfortable' : 'compact' }}">
+            <button type="submit" class="block w-full px-4 py-2.5 text-left text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-indigo-600">
+              {{ request()->cookie('ff_table_density', 'comfortable') === 'compact' ? 'Use comfortable tables' : 'Use compact tables' }}
+            </button>
+          </form>
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="block w-full px-4 py-2.5 text-left text-sm text-red-600 transition-colors hover:bg-red-50">Log out</button>

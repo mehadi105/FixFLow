@@ -7,6 +7,7 @@ use App\Models\RepairRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ReportController extends Controller
@@ -107,11 +108,16 @@ class ReportController extends Controller
      */
     private function technicianPerformance()
     {
-        return User::where('role', User::ROLE_TECHNICIAN)
-            ->withCount([
-                'assignedRepairRequests as assigned_count',
-                'assignedRepairRequests as completed_count' => fn ($q) => $q->where('status', RepairRequest::STATUS_COMPLETED),
-            ])
+        return DB::table('users')
+            ->leftJoin('repair_requests', 'users.id', '=', 'repair_requests.technician_id')
+            ->select('users.id', 'users.name', 'users.email')
+            ->selectRaw('COUNT(repair_requests.id) as assigned_count')
+            ->selectRaw(
+                'SUM(CASE WHEN repair_requests.status = ? THEN 1 ELSE 0 END) as completed_count',
+                [RepairRequest::STATUS_COMPLETED]
+            )
+            ->where('users.role', User::ROLE_TECHNICIAN)
+            ->groupBy('users.id', 'users.name', 'users.email')
             ->orderByDesc('assigned_count')
             ->get();
     }

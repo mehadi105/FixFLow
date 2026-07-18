@@ -17,6 +17,13 @@
                             Send to Customer
                         </button>
                     </form>
+                    <form method="POST" action="{{ route('invoices.destroy', $invoice) }}" class="print:hidden" onsubmit="return confirm('Delete this unsent draft invoice? This cannot be undone.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="ff-btn-secondary text-rose-600 hover:border-rose-200 hover:bg-rose-50">
+                            Delete Draft
+                        </button>
+                    </form>
                 @endif
                 <form method="POST" action="{{ route('invoices.mark-paid', $invoice) }}" class="print:hidden">
                     @csrf
