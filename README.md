@@ -10,6 +10,7 @@ Built as a university final project with **Laravel**, **Blade**, and **Tailwind 
 
 ### Customer
 - Register / sign in and land on a personal dashboard
+- **Forgot password** — email reset link (Mailpit locally)
 - Submit repair requests (device details, issue description, priority, optional image)
 - Track repair status through a live timeline
 - View invoices and warranty coverage
@@ -78,6 +79,38 @@ composer run dev
 ```
 
 Then open http://127.0.0.1:8000.
+
+### Forgot password (local, Mailpit)
+
+FixFlow can email password reset links. For local development, use [Mailpit](https://github.com/axllent/mailpit) to catch mail in a browser UI.
+
+```bash
+# Install once (macOS)
+brew install mailpit
+
+# Start Mailpit (keep running in a terminal)
+mailpit
+```
+
+Mailpit UI: http://127.0.0.1:8025 · SMTP: `127.0.0.1:1025`
+
+Ensure `.env` has:
+
+```env
+APP_URL=http://127.0.0.1:8000
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+MAIL_FROM_ADDRESS="noreply@fixflow.test"
+MAIL_FROM_NAME="FixFlow"
+```
+
+Then `php artisan config:clear` and test:
+
+1. Open `/login` → **Forgot password?**
+2. Enter `customer@fixflow.test` → submit
+3. Open Mailpit → click the reset email → use the link
+4. Set a new password → sign in
 
 ### Live chat demo (two windows)
 

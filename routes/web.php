@@ -6,6 +6,7 @@ use App\Http\Controllers\InvoicePaymentController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\RepairRequestController;
 use App\Http\Controllers\TechnicianApplicationController;
 use App\Http\Controllers\UserController;
@@ -48,6 +49,18 @@ Route::middleware('guest')->group(function () {
             'email' => 'These credentials do not match our records.',
         ])->onlyInput('email');
     });
+
+    Route::get('/forgot-password', [PasswordResetController::class, 'create'])
+        ->name('password.request');
+
+    Route::post('/forgot-password', [PasswordResetController::class, 'store'])
+        ->name('password.email');
+
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])
+        ->name('password.reset');
+
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])
+        ->name('password.update');
 
     Route::get('/register', function () {
         return view('auth.register');

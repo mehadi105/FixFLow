@@ -47,6 +47,7 @@ class DatabaseSeeder extends Seeder
             $this->seedApprovedTechnicianApplications($technicians, $admin);
             $this->seedPendingTechnicianApplication();
             $this->seedDemoPaymentFlow($john, $technicians->first());
+            $this->seedDemoPendingPayment($john, $technicians->skip(1)->first() ?? $technicians->first());
 
             return;
         }
@@ -134,6 +135,7 @@ class DatabaseSeeder extends Seeder
         $this->seedDemoChat($john);
         $this->seedPendingTechnicianApplication();
         $this->seedDemoPaymentFlow($john, $technicians->first());
+        $this->seedDemoPendingPayment($john, $technicians->skip(1)->first() ?? $technicians->first());
     }
 
     /**
@@ -169,6 +171,49 @@ class DatabaseSeeder extends Seeder
                 'discount' => 10.00,
                 'total' => 230.00,
                 'payment_status' => Invoice::STATUS_DRAFT,
+            ]
+        );
+
+        if (! $invoice->invoice_number) {
+            $invoice->update([
+                'invoice_number' => 'INV-'.now()->year.'-'.str_pad((string) $invoice->id, 4, '0', STR_PAD_LEFT),
+            ]);
+        }
+    }
+
+    /**
+     * Second demo: invoice already sent — customer can pay immediately (Stripe / cash).
+     */
+    private function seedDemoPendingPayment(User $john, User $technician): void
+    {
+        $pendingPay = RepairRequest::updateOrCreate(
+            ['reference' => 'RR-DEMO-PAY-2'],
+            [
+                'user_id' => $john->id,
+                'technician_id' => $technician->id,
+                'device_type' => 'Laptop',
+                'brand' => 'Apple',
+                'model' => 'MacBook Air M2',
+                'serial_number' => 'SN-DEMO-8842',
+                'issue_description' => 'Battery drains quickly and will not hold charge.',
+                'diagnosis_notes' => 'Battery replacement completed. Full charge cycle test passed.',
+                'priority' => 'medium',
+                'status' => RepairRequest::STATUS_COMPLETED,
+                'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT,
+                'fulfillment_method' => null,
+                'delivery_address' => null,
+            ]
+        );
+
+        $invoice = Invoice::updateOrCreate(
+            ['repair_request_id' => $pendingPay->id],
+            [
+                'user_id' => $john->id,
+                'service_charge' => 85.00,
+                'parts_cost' => 65.00,
+                'discount' => 0.00,
+                'total' => 150.00,
+                'payment_status' => Invoice::STATUS_UNPAID,
             ]
         );
 

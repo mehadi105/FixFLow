@@ -10,6 +10,12 @@
     <form class="mt-8 space-y-5" action="{{ route('login') }}" method="POST">
         @csrf
 
+        @if (session('status'))
+            <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 ring-1 ring-emerald-200">
+                {{ session('status') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">
                 {{ $errors->first() }}
@@ -23,11 +29,14 @@
 
         <x-password-input id="password" name="password" label="Password" autocomplete="current-password" />
 
-        <div class="flex items-center">
+        <div class="flex items-center justify-between gap-3">
             <label class="flex items-center gap-2">
                 <input type="checkbox" name="remember" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/40">
                 <span class="text-sm text-slate-600">Remember me</span>
             </label>
+            <a href="{{ route('password.request') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+                Forgot password?
+            </a>
         </div>
 
         <button type="submit" class="ff-btn-primary w-full">Sign in</button>
