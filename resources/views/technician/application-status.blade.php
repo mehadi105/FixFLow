@@ -41,6 +41,18 @@
                 <div><dt>Specialties</dt><dd>{{ $application->specialties }}</dd></div>
                 <div><dt>Certification</dt><dd>{{ $application->certification ?? '—' }}</dd></div>
                 <div class="ff-dl-wide"><dt>Motivation</dt><dd class="font-normal text-slate-700">{{ $application->motivation }}</dd></div>
+                <div class="ff-dl-wide">
+                    <dt>Supporting document</dt>
+                    <dd class="font-normal text-slate-700">
+                        @if ($application->hasDocument())
+                            <a href="{{ asset('storage/'.$application->document_path) }}" target="_blank" rel="noopener" class="font-semibold text-indigo-600 hover:text-indigo-800">
+                                {{ $application->documentLabel() }}
+                            </a>
+                        @else
+                            —
+                        @endif
+                    </dd>
+                </div>
                 <div><dt>Submitted</dt><dd>{{ $application->created_at->format('M d, Y g:i A') }}</dd></div>
             </dl>
         </x-dashboard-card>

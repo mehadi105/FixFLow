@@ -76,7 +76,10 @@ class InvoiceController extends Controller
 
         $invoice->update(['invoice_number' => 'INV-'.now()->year.'-'.str_pad((string) $invoice->id, 4, '0', STR_PAD_LEFT)]);
 
-        if ($repairRequest->status === RepairRequest::STATUS_COMPLETED) {
+        if (in_array($repairRequest->status, [
+            RepairRequest::STATUS_COMPLETED,
+            RepairRequest::STATUS_DECLINED,
+        ], true)) {
             $invoices = app(InvoiceService::class);
             if ($invoice->isDraft()) {
                 $repairRequest->update(['fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_INVOICE]);

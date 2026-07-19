@@ -146,10 +146,15 @@ class RepairRequestController extends Controller
 
         $canChat = $repairRequest->hasChatParticipant($user);
 
+        $invoices = app(InvoiceService::class);
+
         return view('repair-requests.show', [
             'role' => $user->role,
             'repairRequest' => $repairRequest,
             'canChat' => $canChat,
+            'suggestedServiceCharge' => $invoices->suggestServiceCharge(),
+            'suggestedPartsCost' => $invoices->estimatePartsCost($repairRequest),
+            'suggestedDiagnosisFee' => $invoices->suggestDiagnosisFee(),
             // Technicians available for assignment (admins only need this list).
             'technicians' => $user->isAdmin()
                 ? User::approvedTechnicians()->orderBy('name')->get()
@@ -193,8 +198,10 @@ class RepairRequestController extends Controller
     {
         $this->authorizeWorker($request, $repairRequest);
 
+        $allowed = $repairRequest->availableStatusTransitions();
+
         $validated = $request->validate([
-            'status' => ['required', Rule::in(RepairRequest::STATUSES)],
+            'status' => ['required', Rule::in($allowed)],
         ]);
 
         $repairRequest->update(['status' => $validated['status']]);
@@ -224,6 +231,112 @@ class RepairRequestController extends Controller
         $repairRequest->update(['diagnosis_notes' => $validated['diagnosis_notes']]);
 
         return back()->with('status', 'Diagnosis notes saved.');
+    }
+
+    /**
+     * Submit (or revise) a post-diagnosis repair quote for customer approval.
+     */
+    public function submitQuote(Request $request, RepairRequest $repairRequest, InvoiceService $invoices): RedirectResponse
+    {
+        $this->authorizeWorker($request, $repairRequest);
+
+        if (! in_array($repairRequest->status, [
+            RepairRequest::STATUS_DIAGNOSING,
+            RepairRequest::STATUS_QUOTED,
+        ], true)) {
+            return back()->withErrors([
+                'quote' => 'Quotes can only be sent while the repair is in diagnosis or awaiting customer decision.',
+            ]);
+        }
+
+        if (! filled($repairRequest->diagnosis_notes)) {
+            return back()->withErrors([
+                'diagnosis_notes' => 'Save diagnosis notes before sending a quote.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'quote_service_charge' => ['required', 'numeric', 'min:0'],
+            'quote_parts_cost' => ['required', 'numeric', 'min:0'],
+            'quote_discount' => ['required', 'numeric', 'min:0'],
+            'diagnosis_fee' => ['required', 'numeric', 'min:0'],
+            'quote_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $repairRequest->update([
+            'quote_service_charge' => $validated['quote_service_charge'],
+            'quote_parts_cost' => $validated['quote_parts_cost'],
+            'quote_discount' => $validated['quote_discount'],
+            'diagnosis_fee' => $validated['diagnosis_fee'],
+            'quote_notes' => $validated['quote_notes'] ?? null,
+            'quoted_at' => now(),
+            'quote_responded_at' => null,
+            'status' => RepairRequest::STATUS_QUOTED,
+        ]);
+
+        return back()->with(
+            'status',
+            'Quote sent to the customer. Repair will continue only if they approve. Suggested total: $'
+            .number_format($repairRequest->fresh()->quoteTotal(), 2).'.'
+        );
+    }
+
+    /**
+     * Customer approves the quote so repair work can continue.
+     */
+    public function approveQuote(Request $request, RepairRequest $repairRequest): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->isCustomer() || $repairRequest->user_id !== $user->id) {
+            abort(403);
+        }
+
+        if (! $repairRequest->canRespondToQuote()) {
+            return back()->withErrors([
+                'quote' => 'There is no quote waiting for your decision.',
+            ]);
+        }
+
+        $repairRequest->update([
+            'status' => RepairRequest::STATUS_REPAIRING,
+            'quote_responded_at' => now(),
+        ]);
+
+        return back()->with('status', 'Quote approved. Our technician will continue the repair.');
+    }
+
+    /**
+     * Customer declines the quote and is billed only the diagnosis fee.
+     */
+    public function declineQuote(Request $request, RepairRequest $repairRequest, InvoiceService $invoices): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->isCustomer() || $repairRequest->user_id !== $user->id) {
+            abort(403);
+        }
+
+        if (! $repairRequest->canRespondToQuote()) {
+            return back()->withErrors([
+                'quote' => 'There is no quote waiting for your decision.',
+            ]);
+        }
+
+        $repairRequest->update([
+            'status' => RepairRequest::STATUS_DECLINED,
+            'quote_responded_at' => now(),
+        ]);
+
+        $invoice = $invoices->createDiagnosisFeeInvoice($repairRequest->fresh());
+
+        return redirect()
+            ->route('invoices.show', $invoice)
+            ->with(
+                'status',
+                'Quote declined. Please pay the diagnosis fee ($'.number_format((float) $invoice->total, 2)
+                .'), then choose how to get your device back.'
+            );
     }
 
     /**

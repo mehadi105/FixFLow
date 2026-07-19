@@ -59,11 +59,13 @@ class DatabaseSeeder extends Seeder
         // --- Repair requests across the last 6 months --------------------
         // status => [share, hasTechnician, hasDiagnosis]
         $blueprint = [
-            [RepairRequest::STATUS_COMPLETED, 9, true, true],
-            [RepairRequest::STATUS_REPAIRING, 4, true, true],
-            [RepairRequest::STATUS_DIAGNOSING, 3, true, true],
-            [RepairRequest::STATUS_ASSIGNED, 3, true, false],
-            [RepairRequest::STATUS_PENDING, 3, false, false],
+            [RepairRequest::STATUS_COMPLETED, 8, true, true],
+            [RepairRequest::STATUS_REPAIRING, 3, true, true],
+            [RepairRequest::STATUS_QUOTED, 2, true, true],
+            [RepairRequest::STATUS_DECLINED, 2, true, true],
+            [RepairRequest::STATUS_DIAGNOSING, 2, true, true],
+            [RepairRequest::STATUS_ASSIGNED, 2, true, false],
+            [RepairRequest::STATUS_PENDING, 2, false, false],
         ];
 
         $diagnosisSamples = [
@@ -82,11 +84,33 @@ class DatabaseSeeder extends Seeder
                     ? ($customer->id === $john->id ? $technicians->first() : $technicians->random())
                     : null;
 
+                $service = RepairRequest::DEFAULT_SERVICE_CHARGE;
+                $parts = fake()->randomElement([65.0, 95.0, 120.0, 145.0]);
+                $discount = fake()->boolean(20) ? 10.0 : 0.0;
+                $diagnosisFee = RepairRequest::DEFAULT_DIAGNOSIS_FEE;
+                $needsQuote = in_array($status, [
+                    RepairRequest::STATUS_QUOTED,
+                    RepairRequest::STATUS_REPAIRING,
+                    RepairRequest::STATUS_COMPLETED,
+                    RepairRequest::STATUS_DECLINED,
+                ], true);
+
                 $repair = RepairRequest::factory()->create([
                     'user_id' => $customer->id,
                     'technician_id' => $technician?->id,
                     'status' => $status,
                     'diagnosis_notes' => $hasDiagnosis ? fake()->randomElement($diagnosisSamples) : null,
+                    'quote_service_charge' => $needsQuote ? $service : null,
+                    'quote_parts_cost' => $needsQuote ? $parts : null,
+                    'quote_discount' => $needsQuote ? $discount : null,
+                    'diagnosis_fee' => $needsQuote ? $diagnosisFee : null,
+                    'quote_notes' => $needsQuote ? 'Includes parts, labour, and post-repair testing.' : null,
+                    'quoted_at' => $needsQuote ? $createdAt->copy()->addHours(2) : null,
+                    'quote_responded_at' => in_array($status, [
+                        RepairRequest::STATUS_REPAIRING,
+                        RepairRequest::STATUS_COMPLETED,
+                        RepairRequest::STATUS_DECLINED,
+                    ], true) ? $createdAt->copy()->addHours(5) : null,
                     'created_at' => $createdAt,
                     'updated_at' => $createdAt,
                 ]);
@@ -96,6 +120,10 @@ class DatabaseSeeder extends Seeder
                     $invoice = Invoice::factory()->create([
                         'repair_request_id' => $repair->id,
                         'user_id' => $repair->user_id,
+                        'service_charge' => $service,
+                        'parts_cost' => $parts,
+                        'discount' => $discount,
+                        'total' => max(0, $service + $parts - $discount),
                         'payment_status' => fake()->boolean(75) ? Invoice::STATUS_PAID : Invoice::STATUS_UNPAID,
                         'created_at' => $createdAt,
                         'updated_at' => $createdAt,
@@ -120,13 +148,20 @@ class DatabaseSeeder extends Seeder
                         'created_at' => $createdAt,
                         'updated_at' => $createdAt,
                     ]);
-                } elseif ($status === RepairRequest::STATUS_REPAIRING && fake()->boolean(50)) {
-                    // Some in-progress repairs already have an unpaid invoice.
+                } elseif ($status === RepairRequest::STATUS_DECLINED) {
                     Invoice::factory()->unpaid()->create([
                         'repair_request_id' => $repair->id,
                         'user_id' => $repair->user_id,
+                        'service_charge' => $diagnosisFee,
+                        'parts_cost' => 0,
+                        'discount' => 0,
+                        'total' => $diagnosisFee,
                         'created_at' => $createdAt,
                         'updated_at' => $createdAt,
+                    ]);
+
+                    $repair->update([
+                        'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT,
                     ]);
                 }
             }
@@ -136,6 +171,7 @@ class DatabaseSeeder extends Seeder
         $this->seedPendingTechnicianApplication();
         $this->seedDemoPaymentFlow($john, $technicians->first());
         $this->seedDemoPendingPayment($john, $technicians->skip(1)->first() ?? $technicians->first());
+        $this->seedDemoQuoteAwaitingDecision($john, $technicians->first());
     }
 
     /**
@@ -154,6 +190,13 @@ class DatabaseSeeder extends Seeder
                 'serial_number' => 'SN-DEMO-7721',
                 'issue_description' => 'Cracked screen after drop. Touch works but glass is shattered.',
                 'diagnosis_notes' => 'Screen assembly replacement completed. Device tested and working.',
+                'quote_service_charge' => 95.00,
+                'quote_parts_cost' => 145.00,
+                'quote_discount' => 10.00,
+                'diagnosis_fee' => RepairRequest::DEFAULT_DIAGNOSIS_FEE,
+                'quote_notes' => 'Full screen assembly replacement with testing.',
+                'quoted_at' => now()->subDays(3),
+                'quote_responded_at' => now()->subDays(2),
                 'priority' => 'high',
                 'status' => RepairRequest::STATUS_COMPLETED,
                 'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_INVOICE,
@@ -197,6 +240,13 @@ class DatabaseSeeder extends Seeder
                 'serial_number' => 'SN-DEMO-8842',
                 'issue_description' => 'Battery drains quickly and will not hold charge.',
                 'diagnosis_notes' => 'Battery replacement completed. Full charge cycle test passed.',
+                'quote_service_charge' => 85.00,
+                'quote_parts_cost' => 65.00,
+                'quote_discount' => 0.00,
+                'diagnosis_fee' => RepairRequest::DEFAULT_DIAGNOSIS_FEE,
+                'quote_notes' => 'OEM battery replacement and calibration.',
+                'quoted_at' => now()->subDays(2),
+                'quote_responded_at' => now()->subDay(),
                 'priority' => 'medium',
                 'status' => RepairRequest::STATUS_COMPLETED,
                 'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT,
@@ -222,6 +272,38 @@ class DatabaseSeeder extends Seeder
                 'invoice_number' => 'INV-'.now()->year.'-'.str_pad((string) $invoice->id, 4, '0', STR_PAD_LEFT),
             ]);
         }
+    }
+
+    /**
+     * Dedicated quoted repair for customer approve/decline demo.
+     */
+    private function seedDemoQuoteAwaitingDecision(User $john, User $technician): void
+    {
+        RepairRequest::updateOrCreate(
+            ['reference' => 'RR-DEMO-QUOTE'],
+            [
+                'user_id' => $john->id,
+                'technician_id' => $technician->id,
+                'device_type' => 'Tablet',
+                'brand' => 'Apple',
+                'model' => 'iPad Air',
+                'serial_number' => 'SN-DEMO-9910',
+                'issue_description' => 'Cracked screen and intermittent touch near the top edge.',
+                'diagnosis_notes' => 'Digitizer and LCD need replacement. Frame is intact; no liquid damage.',
+                'quote_service_charge' => 85.00,
+                'quote_parts_cost' => 145.00,
+                'quote_discount' => 0.00,
+                'diagnosis_fee' => RepairRequest::DEFAULT_DIAGNOSIS_FEE,
+                'quote_notes' => 'Includes genuine screen assembly, labour, and 6-month warranty if approved.',
+                'quoted_at' => now()->subHours(4),
+                'quote_responded_at' => null,
+                'priority' => 'high',
+                'status' => RepairRequest::STATUS_QUOTED,
+                'fulfillment_status' => null,
+                'fulfillment_method' => null,
+                'delivery_address' => null,
+            ]
+        );
     }
 
     /**

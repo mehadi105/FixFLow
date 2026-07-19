@@ -1,6 +1,9 @@
 @php
     $totalRepairs = array_sum($statusSummary);
-    $maxMonthly = max(array_map(fn ($m) => $m['count'], $monthly)) ?: 1;
+    $monthlyLabels = array_column($monthly, 'label');
+    $monthlyValues = array_column($monthly, 'count');
+    $statusLabels = array_map(fn ($status) => ucfirst($status), array_keys($statusSummary));
+    $statusValues = array_values($statusSummary);
 @endphp
 
 <x-app-layout :role="'admin'">
@@ -34,38 +37,27 @@
             @if ($totalRepairs === 0)
                 <p class="py-6 text-center text-sm text-slate-500">No repair data yet.</p>
             @else
-                <div class="space-y-4">
-                    @php
-                        $statusKeys = array_keys($statusSummary);
-                        $statusIndex = 0;
-                    @endphp
-                    @while ($statusIndex < count($statusKeys))
-                        @php
-                            $status = $statusKeys[$statusIndex];
-                            $count = $statusSummary[$status];
-                            $percent = round(($count / $totalRepairs) * 100);
-                            $statusIndex++;
-                        @endphp
-                        <x-progress-bar
-                            :label="ucfirst($status)"
-                            :value="$count . ' (' . $percent . '%)'"
-                            :percent="$percent"
-                        />
-                    @endwhile
+                <div class="relative h-64">
+                    <canvas
+                        data-chart="doughnut"
+                        data-labels='@json($statusLabels)'
+                        data-values='@json($statusValues)'
+                        aria-label="Repair status doughnut chart"
+                    ></canvas>
                 </div>
             @endif
         </x-dashboard-card>
     </div>
 
     <x-dashboard-card title="Monthly Repair Count" description="Repair requests created over the last 6 months" class="mb-6">
-        <div class="flex h-40 items-end justify-between gap-3 px-2 sm:px-4">
-            @foreach ($monthly as $item)
-                <div class="flex flex-1 flex-col items-center gap-2">
-                    <span class="text-xs font-medium text-slate-600">{{ $item['count'] }}</span>
-                    <div class="w-full rounded-t-lg ff-progress-bar" style="height: {{ ($item['count'] / $maxMonthly) * 120 }}px"></div>
-                    <span class="text-xs text-slate-500">{{ $item['label'] }}</span>
-                </div>
-            @endforeach
+        <div class="relative h-72">
+            <canvas
+                data-chart="bar"
+                data-label="Repairs"
+                data-labels='@json($monthlyLabels)'
+                data-values='@json($monthlyValues)'
+                aria-label="Monthly repair count bar chart"
+            ></canvas>
         </div>
     </x-dashboard-card>
 

@@ -23,6 +23,19 @@ class ConceptCoverageTest extends TestCase
             ->assertHeader('X-Request-ID', 'course-demo-request');
     }
 
+    public function test_authenticated_pages_are_not_cacheable(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $response = $this->actingAs($admin)->get(route('dashboard.admin'));
+
+        $response->assertOk();
+        $cacheControl = strtolower((string) $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $this->assertStringContainsString('private', $cacheControl);
+    }
+
     public function test_login_requests_are_rate_limited(): void
     {
         $email = 'rate-limit@example.test';

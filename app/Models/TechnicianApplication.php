@@ -18,6 +18,8 @@ class TechnicianApplication extends Model
         'specialties',
         'certification',
         'motivation',
+        'document_path',
+        'document_original_name',
         'status',
         'admin_notes',
         'reviewed_by',
@@ -29,6 +31,28 @@ class TechnicianApplication extends Model
         return [
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function hasDocument(): bool
+    {
+        return filled($this->document_path);
+    }
+
+    public function documentLabel(): string
+    {
+        return $this->document_original_name
+            ?: ($this->document_path ? basename($this->document_path) : 'Document');
+    }
+
+    public function hasImageDocument(): bool
+    {
+        if (! $this->document_path) {
+            return false;
+        }
+
+        return in_array(strtolower(pathinfo($this->document_path, PATHINFO_EXTENSION)), [
+            'jpg', 'jpeg', 'png', 'gif', 'webp',
+        ], true);
     }
 
     public function applicant(): BelongsTo

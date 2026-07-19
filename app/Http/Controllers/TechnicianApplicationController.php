@@ -36,10 +36,15 @@ class TechnicianApplicationController extends Controller
             'specialties' => ['required', 'string', 'max:255'],
             'certification' => ['nullable', 'string', 'max:255'],
             'motivation' => ['required', 'string', 'max:2000'],
+            'document' => ['required', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png,webp', 'max:5120'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $user = DB::transaction(function () use ($validated) {
+        $document = $request->file('document');
+        $documentPath = $document->store('technician-applications', 'public');
+        $documentName = $document->getClientOriginalName();
+
+        $user = DB::transaction(function () use ($validated, $documentPath, $documentName) {
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -54,6 +59,8 @@ class TechnicianApplicationController extends Controller
                 'specialties' => $validated['specialties'],
                 'certification' => $validated['certification'] ?? null,
                 'motivation' => $validated['motivation'],
+                'document_path' => $documentPath,
+                'document_original_name' => $documentName,
                 'status' => TechnicianApplication::STATUS_PENDING,
             ]);
 

@@ -22,6 +22,24 @@
                 <div><dt>Specialties</dt><dd>{{ $application->specialties }}</dd></div>
                 <div><dt>Certification</dt><dd>{{ $application->certification ?? '—' }}</dd></div>
                 <div class="ff-dl-wide"><dt>Why FixFlow?</dt><dd class="font-normal text-slate-700">{{ $application->motivation }}</dd></div>
+                <div class="ff-dl-wide">
+                    <dt>Supporting document</dt>
+                    <dd class="font-normal text-slate-700">
+                        @if ($application->hasDocument())
+                            <div class="mt-1 flex flex-wrap items-center gap-3">
+                                <span class="font-medium text-slate-900">{{ $application->documentLabel() }}</span>
+                                <a href="{{ asset('storage/'.$application->document_path) }}" target="_blank" rel="noopener" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+                                    Open document
+                                </a>
+                            </div>
+                            @if ($application->hasImageDocument())
+                                <img src="{{ asset('storage/'.$application->document_path) }}" alt="Application document" class="mt-3 max-h-64 rounded-xl object-contain">
+                            @endif
+                        @else
+                            —
+                        @endif
+                    </dd>
+                </div>
                 <div><dt>Submitted</dt><dd>{{ $application->created_at->format('M d, Y g:i A') }}</dd></div>
                 @if ($application->reviewed_at)
                     <div><dt>Reviewed</dt><dd>{{ $application->reviewed_at->format('M d, Y g:i A') }} by {{ $application->reviewer?->name ?? 'Admin' }}</dd></div>

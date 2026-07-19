@@ -24,9 +24,16 @@ class InvoiceService
             return $repair->invoice;
         }
 
-        $serviceCharge = 85.00;
-        $partsCost = $this->estimatePartsCost($repair);
-        $discount = 0.0;
+        if ($repair->hasQuote()) {
+            $serviceCharge = (float) $repair->quote_service_charge;
+            $partsCost = (float) $repair->quote_parts_cost;
+            $discount = (float) ($repair->quote_discount ?? 0);
+        } else {
+            $serviceCharge = RepairRequest::DEFAULT_SERVICE_CHARGE;
+            $partsCost = $this->estimatePartsCost($repair);
+            $discount = 0.0;
+        }
+
         $total = max(0, $serviceCharge + $partsCost - $discount);
 
         $invoice = Invoice::create([
@@ -51,6 +58,40 @@ class InvoiceService
     }
 
     /**
+     * Bill only the diagnosis fee when the customer declines the repair quote.
+     */
+    public function createDiagnosisFeeInvoice(RepairRequest $repair): Invoice
+    {
+        $repair->loadMissing('invoice');
+
+        if ($repair->invoice) {
+            return $repair->invoice;
+        }
+
+        $fee = (float) ($repair->diagnosis_fee ?? RepairRequest::DEFAULT_DIAGNOSIS_FEE);
+
+        $invoice = Invoice::create([
+            'repair_request_id' => $repair->id,
+            'user_id' => $repair->user_id,
+            'service_charge' => $fee,
+            'parts_cost' => 0,
+            'discount' => 0,
+            'total' => $fee,
+            'payment_status' => Invoice::STATUS_UNPAID,
+        ]);
+
+        $invoice->update([
+            'invoice_number' => 'INV-'.now()->year.'-'.str_pad((string) $invoice->id, 4, '0', STR_PAD_LEFT),
+        ]);
+
+        $repair->update([
+            'fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT,
+        ]);
+
+        return $invoice->fresh();
+    }
+
+    /**
      * Admin sends a reviewed draft invoice to the customer for payment.
      */
     public function sendInvoiceToCustomer(Invoice $invoice): void
@@ -63,7 +104,10 @@ class InvoiceService
 
         $repair = $invoice->repairRequest;
 
-        if ($repair && $repair->status === RepairRequest::STATUS_COMPLETED) {
+        if ($repair && in_array($repair->status, [
+            RepairRequest::STATUS_COMPLETED,
+            RepairRequest::STATUS_DECLINED,
+        ], true)) {
             $repair->update(['fulfillment_status' => RepairRequest::FULFILLMENT_AWAITING_PAYMENT]);
         }
     }
@@ -73,7 +117,10 @@ class InvoiceService
      */
     public function syncFulfillmentStatus(RepairRequest $repair): void
     {
-        if ($repair->status !== RepairRequest::STATUS_COMPLETED) {
+        if (! in_array($repair->status, [
+            RepairRequest::STATUS_COMPLETED,
+            RepairRequest::STATUS_DECLINED,
+        ], true)) {
             return;
         }
 
@@ -115,7 +162,10 @@ class InvoiceService
     {
         $repair = $invoice->repairRequest;
 
-        if (! $repair || $repair->status !== RepairRequest::STATUS_COMPLETED) {
+        if (! $repair || ! in_array($repair->status, [
+            RepairRequest::STATUS_COMPLETED,
+            RepairRequest::STATUS_DECLINED,
+        ], true)) {
             return;
         }
 
@@ -131,7 +181,7 @@ class InvoiceService
         return max(0, $serviceCharge + $partsCost - $discount);
     }
 
-    private function estimatePartsCost(RepairRequest $repair): float
+    public function estimatePartsCost(RepairRequest $repair): float
     {
         $issue = strtolower($repair->issue_description ?? '');
 
@@ -148,5 +198,15 @@ class InvoiceService
         }
 
         return 95.00;
+    }
+
+    public function suggestServiceCharge(): float
+    {
+        return RepairRequest::DEFAULT_SERVICE_CHARGE;
+    }
+
+    public function suggestDiagnosisFee(): float
+    {
+        return RepairRequest::DEFAULT_DIAGNOSIS_FEE;
     }
 }

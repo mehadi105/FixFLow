@@ -1,18 +1,39 @@
 @php
-    $statuses = \App\Models\RepairRequest::STATUSES;
-    $currentIndex = array_search($repairRequest->status, $statuses, true);
+    $isDeclined = $repairRequest->status === \App\Models\RepairRequest::STATUS_DECLINED;
+    $timelineStatuses = \App\Models\RepairRequest::TIMELINE_STATUSES;
+    if ($isDeclined) {
+        $timelineStatuses = [
+            \App\Models\RepairRequest::STATUS_PENDING,
+            \App\Models\RepairRequest::STATUS_ASSIGNED,
+            \App\Models\RepairRequest::STATUS_DIAGNOSING,
+            \App\Models\RepairRequest::STATUS_QUOTED,
+            \App\Models\RepairRequest::STATUS_DECLINED,
+        ];
+    }
+    $currentIndex = array_search($repairRequest->status, $timelineStatuses, true);
+    if ($currentIndex === false) {
+        $currentIndex = 0;
+    }
     $stepLabels = [
         'pending' => 'Submitted',
         'assigned' => 'Assigned',
         'diagnosing' => 'Diagnosing',
+        'quoted' => 'Quote sent',
         'repairing' => 'Repairing',
         'completed' => 'Completed',
+        'declined' => 'Declined',
     ];
+    $statusTransitions = $repairRequest->availableStatusTransitions();
 
     $authUser = auth()->user();
     $canWork = $authUser->isAdmin()
         || ($authUser->isTechnician() && $repairRequest->technician_id === $authUser->id);
     $canChat = $canChat ?? $repairRequest->hasChatParticipant($authUser);
+
+    $quoteService = old('quote_service_charge', $repairRequest->quote_service_charge ?? $suggestedServiceCharge);
+    $quoteParts = old('quote_parts_cost', $repairRequest->quote_parts_cost ?? $suggestedPartsCost);
+    $quoteDiscount = old('quote_discount', $repairRequest->quote_discount ?? 0);
+    $diagnosisFee = old('diagnosis_fee', $repairRequest->diagnosis_fee ?? $suggestedDiagnosisFee);
 @endphp
 
 <x-app-layout :role="$role ?? 'customer'">
@@ -54,14 +75,17 @@
 
             <x-dashboard-card title="Repair Status Timeline">
                 <ol class="relative ml-3 border-l border-slate-200">
-                    @foreach ($statuses as $i => $statusKey)
+                    @foreach ($timelineStatuses as $i => $statusKey)
                         @php
-                            $isFullyCompleted = $repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED;
-                            $done = $i < $currentIndex || ($isFullyCompleted && $i === $currentIndex);
-                            $active = ! $isFullyCompleted && $i === $currentIndex;
+                            $isTerminal = in_array($repairRequest->status, [
+                                \App\Models\RepairRequest::STATUS_COMPLETED,
+                                \App\Models\RepairRequest::STATUS_DECLINED,
+                            ], true);
+                            $done = $i < $currentIndex || ($isTerminal && $i === $currentIndex);
+                            $active = ! $isTerminal && $i === $currentIndex;
                         @endphp
                         <li class="mb-6 ml-6 last:mb-0">
-                            <span class="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full {{ $done ? 'bg-indigo-600' : ($active ? 'bg-indigo-100 ring-2 ring-indigo-600' : 'bg-slate-100') }}">
+                            <span class="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full {{ $done ? ($statusKey === 'declined' ? 'bg-rose-600' : 'bg-indigo-600') : ($active ? 'bg-indigo-100 ring-2 ring-indigo-600' : 'bg-slate-100') }}">
                                 @if ($done)
                                     <svg class="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                                 @endif
@@ -102,18 +126,19 @@
         </div>
 
         <div class="ff-section">
-            @if ($canWork)
+            @if ($canWork && count($statusTransitions) > 1)
                 <x-dashboard-card title="Update Status">
                     <form method="POST" action="{{ route('repair-requests.status', $repairRequest) }}" class="space-y-3">
                         @csrf
                         <div class="ff-field">
                             <label for="status" class="ff-label">Repair status</label>
                             <select id="status" name="status" class="ff-input">
-                                @foreach ($statuses as $statusOption)
-                                    <option value="{{ $statusOption }}" @selected($repairRequest->status === $statusOption)>{{ ucfirst($statusOption) }}</option>
+                                @foreach ($statusTransitions as $statusOption)
+                                    <option value="{{ $statusOption }}" @selected($repairRequest->status === $statusOption)>{{ ucfirst(str_replace('_', ' ', $statusOption)) }}</option>
                                 @endforeach
                             </select>
                         </div>
+                        <p class="text-xs text-slate-500">After diagnosis, send a quote for customer approval before repairing.</p>
                         <button type="submit" class="ff-btn-primary w-full">Save Status</button>
                     </form>
                 </x-dashboard-card>
@@ -152,18 +177,120 @@
             </x-dashboard-card>
 
             <x-dashboard-card title="Diagnosis Notes">
-                @if ($canWork)
+                @if ($canWork && ! in_array($repairRequest->status, [
+                    \App\Models\RepairRequest::STATUS_COMPLETED,
+                    \App\Models\RepairRequest::STATUS_DECLINED,
+                    \App\Models\RepairRequest::STATUS_REPAIRING,
+                ], true))
                     <form method="POST" action="{{ route('repair-requests.diagnosis', $repairRequest) }}" class="space-y-3">
                         @csrf
                         <div class="ff-field">
                             <label for="diagnosis_notes" class="sr-only">Diagnosis notes</label>
                             <textarea id="diagnosis_notes" name="diagnosis_notes" rows="4" placeholder="Add diagnosis notes..." class="ff-input">{{ old('diagnosis_notes', $repairRequest->diagnosis_notes) }}</textarea>
                         </div>
+                        @error('diagnosis_notes')
+                            <p class="text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
                         <button type="submit" class="ff-btn-primary w-full">Save Notes</button>
                     </form>
                 @else
                     <p class="text-sm {{ $repairRequest->diagnosis_notes ? 'text-slate-700' : 'text-slate-500' }}">
                         {{ $repairRequest->diagnosis_notes ?? 'No diagnosis notes yet.' }}
+                    </p>
+                @endif
+            </x-dashboard-card>
+
+            <x-dashboard-card title="Repair Quote">
+                @if ($canWork && in_array($repairRequest->status, [
+                    \App\Models\RepairRequest::STATUS_DIAGNOSING,
+                    \App\Models\RepairRequest::STATUS_QUOTED,
+                ], true))
+                    <p class="mb-3 text-sm text-slate-600">
+                        Send a quote after diagnosis. The customer must approve before repair continues. If they decline, only the diagnosis fee is charged.
+                    </p>
+                    @unless (filled($repairRequest->diagnosis_notes))
+                        <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+                            Save diagnosis notes first, then send the quote.
+                        </p>
+                    @endunless
+                    <form method="POST" action="{{ route('repair-requests.quote', $repairRequest) }}" class="space-y-3">
+                        @csrf
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="ff-field">
+                                <label for="quote_service_charge" class="ff-label">Service charge</label>
+                                <input id="quote_service_charge" type="number" step="0.01" min="0" name="quote_service_charge" value="{{ $quoteService }}" class="ff-input" required>
+                            </div>
+                            <div class="ff-field">
+                                <label for="quote_parts_cost" class="ff-label">Parts cost</label>
+                                <input id="quote_parts_cost" type="number" step="0.01" min="0" name="quote_parts_cost" value="{{ $quoteParts }}" class="ff-input" required>
+                            </div>
+                            <div class="ff-field">
+                                <label for="quote_discount" class="ff-label">Discount</label>
+                                <input id="quote_discount" type="number" step="0.01" min="0" name="quote_discount" value="{{ $quoteDiscount }}" class="ff-input" required>
+                            </div>
+                            <div class="ff-field">
+                                <label for="diagnosis_fee" class="ff-label">Diagnosis fee (if declined)</label>
+                                <input id="diagnosis_fee" type="number" step="0.01" min="0" name="diagnosis_fee" value="{{ $diagnosisFee }}" class="ff-input" required>
+                            </div>
+                        </div>
+                        <div class="ff-field">
+                            <label for="quote_notes" class="ff-label">Quote notes (optional)</label>
+                            <textarea id="quote_notes" name="quote_notes" rows="2" class="ff-input" placeholder="What the repair includes...">{{ old('quote_notes', $repairRequest->quote_notes) }}</textarea>
+                        </div>
+                        @error('quote')
+                            <p class="text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
+                        <button type="submit" class="ff-btn-primary w-full" @disabled(! filled($repairRequest->diagnosis_notes))>
+                            {{ $repairRequest->status === \App\Models\RepairRequest::STATUS_QUOTED ? 'Update & resend quote' : 'Send quote to customer' }}
+                        </button>
+                    </form>
+                @elseif ($repairRequest->hasQuote())
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-500">Service</dt><dd class="font-medium text-slate-900">${{ number_format((float) $repairRequest->quote_service_charge, 2) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Parts</dt><dd class="font-medium text-slate-900">${{ number_format((float) $repairRequest->quote_parts_cost, 2) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Discount</dt><dd class="font-medium text-slate-900">${{ number_format((float) $repairRequest->quote_discount, 2) }}</dd></div>
+                        <div class="flex justify-between border-t border-slate-100 pt-2"><dt class="font-semibold text-slate-800">Quoted total</dt><dd class="font-semibold text-slate-900">${{ number_format($repairRequest->quoteTotal(), 2) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Diagnosis fee if declined</dt><dd class="font-medium text-slate-900">${{ number_format((float) ($repairRequest->diagnosis_fee ?? 0), 2) }}</dd></div>
+                    </dl>
+                    @if ($repairRequest->quote_notes)
+                        <p class="mt-3 text-sm text-slate-600">{{ $repairRequest->quote_notes }}</p>
+                    @endif
+
+                    @if ($authUser->isCustomer() && $repairRequest->canRespondToQuote())
+                        <div class="mt-4 space-y-3 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p class="text-sm text-slate-700">
+                                Approve to continue the repair at the quoted price, or decline and pay only the diagnosis fee.
+                            </p>
+                            @error('quote')
+                                <p class="text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            <form method="POST" action="{{ route('repair-requests.quote.approve', $repairRequest) }}">
+                                @csrf
+                                <button type="submit" class="ff-btn-primary w-full">Approve quote &amp; continue repair</button>
+                            </form>
+                            <form method="POST" action="{{ route('repair-requests.quote.decline', $repairRequest) }}" onsubmit="return confirm('Decline this repair? You will only be charged the diagnosis fee.');">
+                                @csrf
+                                <button type="submit" class="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50">
+                                    Decline repair (pay diagnosis fee only)
+                                </button>
+                            </form>
+                        </div>
+                    @elseif ($repairRequest->status === \App\Models\RepairRequest::STATUS_QUOTED)
+                        <p class="mt-3 text-sm text-fuchsia-700">Waiting for the customer to approve or decline this quote.</p>
+                    @elseif ($repairRequest->status === \App\Models\RepairRequest::STATUS_DECLINED)
+                        <p class="mt-3 text-sm text-rose-700">Customer declined the repair. Diagnosis fee invoice applies.</p>
+                    @elseif ($repairRequest->status === \App\Models\RepairRequest::STATUS_REPAIRING)
+                        <p class="mt-3 text-sm text-emerald-700">Customer approved this quote. Repair is in progress.</p>
+                    @elseif ($repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED)
+                        <p class="mt-3 text-sm text-emerald-700">Repair finished using the approved quote amounts.</p>
+                    @endif
+                @else
+                    <p class="text-sm text-slate-500">
+                        @if ($authUser->isCustomer())
+                            After diagnosis, you will receive a quote to approve before any repair work continues.
+                        @else
+                            Move the job to diagnosing, save notes, then send a quote.
+                        @endif
                     </p>
                 @endif
             </x-dashboard-card>
@@ -206,7 +333,10 @@
                 @endif
             </x-dashboard-card>
 
-            @if ($repairRequest->status === \App\Models\RepairRequest::STATUS_COMPLETED)
+            @if (in_array($repairRequest->status, [
+                \App\Models\RepairRequest::STATUS_COMPLETED,
+                \App\Models\RepairRequest::STATUS_DECLINED,
+            ], true))
                 <x-dashboard-card title="Device Return">
                     @if ($repairRequest->fulfillment_status)
                         <dl class="space-y-2 text-sm">
@@ -241,7 +371,11 @@
 
                     @if ($repairRequest->fulfillment_status === \App\Models\RepairRequest::FULFILLMENT_AWAITING_PAYMENT)
                         <p class="mt-3 text-sm text-slate-600">
-                            Repair is complete. Pay the invoice to choose <strong>home delivery</strong> or <strong>pickup at the service center</strong>.
+                            @if ($isDeclined)
+                                Quote was declined. Pay the <strong>diagnosis fee</strong>, then choose pickup or delivery for your unrepaired device.
+                            @else
+                                Repair is complete. Pay the invoice to choose <strong>home delivery</strong> or <strong>pickup at the service center</strong>.
+                            @endif
                         </p>
                     @endif
 

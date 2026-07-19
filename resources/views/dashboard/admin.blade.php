@@ -1,6 +1,9 @@
 @php
-    $maxRevenue = max(array_map(fn ($m) => $m['amount'], $monthlyRevenue)) ?: 1;
     $statusTotal = array_sum($statusCounts);
+    $statusLabels = array_map(fn ($status) => ucfirst($status), array_keys($statusCounts));
+    $statusValues = array_values($statusCounts);
+    $revenueLabels = array_column($monthlyRevenue, 'label');
+    $revenueValues = array_column($monthlyRevenue, 'amount');
 @endphp
 
 <x-app-layout :role="'admin'">
@@ -55,25 +58,30 @@
 
         <div class="ff-section">
             <x-dashboard-card title="Repairs by Status">
-                <div class="space-y-4">
-                    @foreach ($statusCounts as $label => $count)
-                        <x-progress-bar
-                            :label="ucfirst($label)"
-                            :value="$count"
-                            :percent="$statusTotal > 0 ? round(($count / $statusTotal) * 100) : 0"
-                        />
-                    @endforeach
-                </div>
+                @if ($statusTotal === 0)
+                    <p class="py-6 text-center text-sm text-slate-500">No repair data yet.</p>
+                @else
+                    <div class="relative h-56">
+                        <canvas
+                            data-chart="doughnut"
+                            data-labels='@json($statusLabels)'
+                            data-values='@json($statusValues)'
+                            aria-label="Repairs by status doughnut chart"
+                        ></canvas>
+                    </div>
+                @endif
             </x-dashboard-card>
 
             <x-dashboard-card title="Monthly Revenue" description="Paid invoices over the last 6 months">
-                <div class="flex h-32 items-end justify-between gap-2">
-                    @foreach ($monthlyRevenue as $item)
-                        <div class="flex flex-1 flex-col items-center gap-1">
-                            <div class="w-full rounded-t ff-progress-bar" style="height: {{ ($item['amount'] / $maxRevenue) * 100 }}px"></div>
-                            <span class="text-xs text-slate-500">{{ $item['label'] }}</span>
-                        </div>
-                    @endforeach
+                <div class="relative h-56">
+                    <canvas
+                        data-chart="bar"
+                        data-label="Revenue"
+                        data-currency="true"
+                        data-labels='@json($revenueLabels)'
+                        data-values='@json($revenueValues)'
+                        aria-label="Monthly revenue bar chart"
+                    ></canvas>
                 </div>
                 <p class="mt-4 text-center text-sm text-slate-500">
                     {{ end($monthlyRevenue)['label'] }} total: <span class="font-semibold text-slate-900">${{ number_format(end($monthlyRevenue)['amount'], 2) }}</span>

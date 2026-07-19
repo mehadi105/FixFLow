@@ -101,7 +101,13 @@ Route::post('/logout', function (Request $request) {
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
-    return redirect()->route('home');
+    return redirect()
+        ->route('home')
+        ->withHeaders([
+            'Cache-Control' => 'no-cache, no-store, max-age=0, must-revalidate, private',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
 })->middleware('auth')->name('logout');
 
 Route::post('/stripe/webhook', [InvoicePaymentController::class, 'webhook'])
@@ -184,6 +190,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/repair-requests/{repairRequest}/diagnosis', [RepairRequestController::class, 'updateDiagnosis'])
         ->middleware('role:admin,technician', 'approved.technician')
         ->name('repair-requests.diagnosis');
+
+    Route::post('/repair-requests/{repairRequest}/quote', [RepairRequestController::class, 'submitQuote'])
+        ->middleware('role:admin,technician', 'approved.technician')
+        ->name('repair-requests.quote');
+
+    Route::post('/repair-requests/{repairRequest}/quote/approve', [RepairRequestController::class, 'approveQuote'])
+        ->middleware('role:customer')
+        ->name('repair-requests.quote.approve');
+
+    Route::post('/repair-requests/{repairRequest}/quote/decline', [RepairRequestController::class, 'declineQuote'])
+        ->middleware('role:customer')
+        ->name('repair-requests.quote.decline');
 
     Route::post('/repair-requests/{repairRequest}/fulfillment', [RepairRequestController::class, 'chooseFulfillment'])
         ->middleware('role:customer')

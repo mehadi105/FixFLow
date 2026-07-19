@@ -12,12 +12,14 @@ Built as a university final project with **Laravel**, **Blade**, and **Tailwind 
 - Register / sign in and land on a personal dashboard
 - **Forgot password** — email reset link (Mailpit locally)
 - Submit repair requests (device details, issue description, priority, optional image)
+- **Approve or decline repair quotes** after diagnosis (decline = diagnosis fee only)
 - Track repair status through a live timeline
 - View invoices and warranty coverage
 
 ### Technician
 - See jobs assigned to them
-- Update repair status (assigned → diagnosing → repairing → completed)
+- Diagnose, then **send a quote** before repairing
+- Update repair status after customer approval (repairing → completed)
 - Record diagnosis notes
 
 ### Admin
@@ -36,7 +38,7 @@ Built as a university final project with **Laravel**, **Blade**, and **Tailwind 
 - **Laravel 13** (PHP 8.2+)
 - **Blade** templating with reusable components
 - **Tailwind CSS** (custom `ff-*` design system) built via **Vite**
-- **SQLite** by default (any Laravel-supported database works)
+- **PostgreSQL** by default (local Homebrew Postgres recommended)
 - Session-based authentication with role middleware
 
 ---
@@ -44,9 +46,10 @@ Built as a university final project with **Laravel**, **Blade**, and **Tailwind 
 ## Getting Started
 
 ### Requirements
-- PHP 8.2+
+- PHP 8.2+ with `pdo_pgsql`
 - Composer
 - Node.js & npm
+- PostgreSQL 17+ (e.g. `brew install postgresql@17`)
 
 ### Installation
 
@@ -59,8 +62,10 @@ npm install
 cp .env.example .env
 php artisan key:generate
 
-# 3. Database (SQLite is configured by default)
-touch database/database.sqlite
+# 3. Database (PostgreSQL)
+brew services start postgresql@17
+createdb fixflow   # skip if it already exists
+# Ensure .env has DB_CONNECTION=pgsql; on Homebrew, DB_USERNAME is usually your macOS username
 php artisan migrate --seed
 
 # 4. Storage symlink (for uploaded device images)
